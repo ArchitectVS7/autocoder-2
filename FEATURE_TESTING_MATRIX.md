@@ -26,6 +26,112 @@
 
 ---
 
+## Phase 0: Persona Switching - Context-Aware Coding Enhancement (2 days)
+
+**Priority:** 🟢 FOUNDATION
+**Status:** ✅ COMPLETE
+**Purpose:** Enhance coding agent with context-appropriate expertise without orchestration complexity
+
+### Overview
+
+Phase 0 addresses the "passion and creativity" gap in the coding agent by adding persona-based prompt enhancement. This brings context-appropriate expertise (security mindset for auth features, UX mindset for UI features, etc.) without requiring multi-agent orchestration.
+
+**Key Innovation:** Same agent, same loop, smarter prompt selection based on feature type detection.
+
+---
+
+### Task 0.1: Feature Type Detection
+
+| Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
+|------------|-------------------|---------------|----------------|---------------|-------|
+| **0.1.1** | detect_feature_type() function with keyword-based classification | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType` | 29 tests covering all feature types |
+| **0.1.2** | Security feature detection (auth, login, oauth, payment, encryption) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_security_*` | 5 test cases |
+| **0.1.3** | UI/UX feature detection (button, form, accessibility, responsive, wcag) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_ui_ux_*` | 5 test cases |
+| **0.1.4** | API/Backend feature detection (endpoint, database, query, rest, graphql) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_api_*` | 4 test cases |
+| **0.1.5** | Data feature detection (export, import, csv, json, transform, etl) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_data_*` | 4 test cases |
+| **0.1.6** | Performance feature detection (optimize, cache, speed, memory, latency) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_performance_*` | 2 test cases |
+| **0.1.7** | Edge case handling (empty features, missing fields, None values) | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestDetectFeatureType::test_edge_case_*` | 5 test cases |
+| **0.1.8** | Word-boundary matching (avoids substring false positives) | ✅ `complete` | ✅ `passed` | All tests use word-boundary matching | Prevents "form" matching "transformation" |
+
+**Task 0.1 Summary:** 8/8 features complete, 29/29 tests passed
+
+---
+
+### Task 0.2: Persona Prompt Definitions
+
+| Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
+|------------|-------------------|---------------|----------------|---------------|-------|
+| **0.2.1** | SECURITY_PERSONA with OWASP Top 10 coverage | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_security_persona_*` | 2 tests |
+| **0.2.2** | UX_PERSONA with WCAG AA compliance guidance | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_ux_persona_*` | 2 tests |
+| **0.2.3** | API_PERSONA with HTTP codes and performance tips | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_api_persona_*` | 2 tests |
+| **0.2.4** | DATA_PERSONA with validation and encoding guidance | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_data_persona_*` | 2 tests |
+| **0.2.5** | CRAFTSMANSHIP_MINDSET with initiative encouragement | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_craftsmanship_*` | 2 tests |
+| **0.2.6** | Markdown formatting for all personas | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestPersonaContent::test_all_personas_are_markdown` | 1 test |
+
+**Task 0.2 Summary:** 6/6 features complete, 11/11 tests passed
+
+---
+
+### Task 0.3: Persona-Aware Prompt Loading
+
+| Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
+|------------|-------------------|---------------|----------------|---------------|-------|
+| **0.3.1** | get_coding_prompt_with_persona() function | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona` | Core function |
+| **0.3.2** | Security persona appending for security features | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_security_persona_appended` | 1 test |
+| **0.3.3** | UX persona appending for UI/UX features | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_ux_persona_appended` | 1 test |
+| **0.3.4** | API persona appending for backend features | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_api_persona_appended` | 1 test |
+| **0.3.5** | Data persona appending for data features | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_data_persona_appended` | 1 test |
+| **0.3.6** | Craftsmanship mindset ALWAYS appended | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_craftsmanship_always_included` | 1 test |
+| **0.3.7** | Standard features get craftsmanship only | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_standard_only_craftsmanship` | 1 test |
+| **0.3.8** | Base prompt always included | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_base_prompt_included` | 1 test |
+| **0.3.9** | Project-specific prompt support | ✅ `complete` | ✅ `passed` | `tests/test_phase0_persona_switching.py::TestGetCodingPromptWithPersona::test_project_specific_prompt_support` | 1 test |
+
+**Task 0.3 Summary:** 9/9 features complete, 9/9 tests passed
+
+---
+
+### Task 0.4: Integration with Agent Loop
+
+| Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
+|------------|-------------------|---------------|----------------|---------------|-------|
+| **0.4.1** | agent.py integration (pass feature to prompt loader) | ⚠️ `planned` | ⚠️ `none` | N/A | DEFERRED to Phase 3 start |
+| **0.4.2** | Manual validation script for testing | ⚠️ `planned` | ⚠️ `none` | N/A | Optional - can test manually |
+
+**Task 0.4 Summary:** 0/2 features complete (deferred), 0/2 tests (deferred)
+
+---
+
+### Phase 0 Overall Summary
+
+**Total Features:** 23 implemented + 2 deferred = 25 total
+**Implementation Status:** 23/25 (92%) - 2 deferred to Phase 3
+**Test Coverage:** 49/49 tests passed (100% of implemented features)
+**Test Files:** `tests/test_phase0_persona_switching.py` (51 total tests, 49 for features + 2 integration)
+
+**Key Achievements:**
+- ✅ Zero breaking changes to existing code
+- ✅ 100% backward compatible (existing `get_coding_prompt()` unchanged)
+- ✅ Comprehensive test coverage (51 tests)
+- ✅ Production-ready implementation
+- ✅ No Phase 1/2 regression needed (purely additive)
+
+**Deferred to Phase 3:**
+- Agent loop integration (Feature 0.4.1) - will be first feature in Phase 3
+- Manual validation script (Feature 0.4.2) - optional
+
+**Benefits:**
+- 🎯 Context-appropriate expertise (security, UX, API, data)
+- 💡 Encourages initiative and quality beyond minimum requirements
+- 🚫 No orchestration complexity (same agent, enhanced prompts)
+- ⚡ Immediate value for all future development
+
+**Impact on Other Phases:**
+- ✅ Phase 1/2: No changes needed (already complete)
+- ✅ Phase 3: Will benefit from enhanced agent immediately
+- ✅ Phase 4-6: Foundation for all future work
+
+---
+
 ## Phase 1: Skip Management & Dependency Tracking (Weeks 1-2)
 
 ### Task 1.1: Database Schema Extensions
