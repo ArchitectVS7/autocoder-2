@@ -360,7 +360,7 @@ def feature_clear_in_progress(
 def feature_create_bulk(
     features: Annotated[list[dict], Field(description="List of features to create, each with category, name, description, and steps")]
 ) -> str:
-    """Create multiple features in a single operation.
+    """Create multiple features in a single operation with enhanced debug logging.
 
     Features are assigned sequential priorities based on their order.
     All features start with passes=false.
@@ -378,19 +378,28 @@ def feature_create_bulk(
     Returns:
         JSON with: created (int) - number of features created
     """
+    # Debug logging
+    print(f"\n[DEBUG] feature_create_bulk called with {len(features)} features")
+    print(f"[DEBUG] PROJECT_DIR: {PROJECT_DIR}")
+
+    db_path = PROJECT_DIR / "features.db"
+    print(f"[DEBUG] Database path: {db_path}")
+    print(f"[DEBUG] Database exists: {db_path.exists()}")
+
     session = get_session()
     try:
         # Get the starting priority
         max_priority_result = session.query(Feature.priority).order_by(Feature.priority.desc()).first()
         start_priority = (max_priority_result[0] + 1) if max_priority_result else 1
+        print(f"[DEBUG] Starting priority: {start_priority}")
 
         created_count = 0
         for i, feature_data in enumerate(features):
             # Validate required fields
             if not all(key in feature_data for key in ["category", "name", "description", "steps"]):
-                return json.dumps({
-                    "error": f"Feature at index {i} missing required fields (category, name, description, steps)"
-                })
+                error_msg = f"Feature at index {i} missing required fields (category, name, description, steps)"
+                print(f"[DEBUG] ✗ Validation error: {error_msg}")
+                return json.dumps({"error": error_msg})
 
             db_feature = Feature(
                 priority=start_priority + i,
@@ -404,9 +413,11 @@ def feature_create_bulk(
             created_count += 1
 
         session.commit()
+        print(f"[DEBUG] ✓ Successfully committed {created_count} features to database")
 
         return json.dumps({"created": created_count}, indent=2)
     except Exception as e:
+        print(f"[DEBUG] ✗ Error during commit: {e}")
         session.rollback()
         return json.dumps({"error": str(e)})
     finally:

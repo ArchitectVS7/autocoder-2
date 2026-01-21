@@ -23,6 +23,7 @@ Example Usage:
 
 import argparse
 import asyncio
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -125,6 +126,11 @@ def main() -> None:
             print(f"Error: Project '{project_dir_input}' not found in registry")
             print("Use an absolute path or register the project first.")
             return
+
+    # Set PROJECT_DIR environment variable BEFORE creating client
+    # This ensures the MCP server can access the correct project directory
+    os.environ["PROJECT_DIR"] = str(project_dir.resolve())
+    print(f"[DEBUG] Set PROJECT_DIR to: {os.environ['PROJECT_DIR']}\n")
 
     try:
         # Run the agent (MCP server handles feature database)

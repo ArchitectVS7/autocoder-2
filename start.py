@@ -22,6 +22,8 @@ from registry import (
     get_project_path,
     list_registered_projects,
     register_project,
+    unregister_project,
+    update_project_path,
 )
 
 
@@ -81,22 +83,50 @@ def display_menu(projects: list[tuple[str, Path]]) -> None:
 
     if projects:
         print("[2] Continue existing project")
+        print("[3] Edit project settings")
 
     print("[q] Quit")
     print()
 
 
 def display_projects(projects: list[tuple[str, Path]]) -> None:
-    """Display list of existing projects."""
+    """Display list of existing projects with file counts."""
+    from progress import count_passing_tests
+
     print("\n" + "-" * 40)
     print("  Existing Projects")
     print("-" * 40)
 
     for i, (name, path) in enumerate(projects, 1):
-        print(f"  [{i}] {name}")
-        print(f"      {path}")
+        # Get file info
+        spec_exists = check_spec_exists(path)
+        db_exists = (path / "features.db").exists()
 
-    print("\n  [b] Back to main menu")
+        # Count features if db exists
+        feature_count = 0
+        passing_count = 0
+        if db_exists:
+            try:
+                passing, _, total = count_passing_tests(path)
+                feature_count = total
+                passing_count = passing
+            except:
+                pass
+
+        # Display with icons
+        spec_icon = "✓" if spec_exists else "○"
+        db_icon = "✓" if db_exists else "○"
+
+        print(f"  [{i}] {name}")
+        print(f"      Path: {path}")
+
+        if db_exists and feature_count > 0:
+            print(f"      {spec_icon} Spec  {db_icon} Database ({passing_count}/{feature_count} passing)")
+        else:
+            print(f"      {spec_icon} Spec  {db_icon} Database")
+        print()
+
+    print("  [b] Back to main menu")
     print()
 
 
@@ -284,7 +314,7 @@ def run_manual_spec_flow(project_dir: Path) -> bool:
 
 
 def ask_spec_creation_choice() -> str | None:
-    """Ask user whether to create spec with Claude or manually."""
+    """Ask user whether to create spec with Claude, manually, or import PRD."""
     print("\n" + "-" * 40)
     print("  Specification Setup")
     print("-" * 40)
@@ -293,14 +323,81 @@ def ask_spec_creation_choice() -> str | None:
     print("    Interactive conversation to define your project")
     print("\n[2] Edit templates manually")
     print("    Edit the template files directly in your editor")
+    print("\n[3] Import existing PRD")
+    print("    Load a PRD from a file (Markdown, TXT, or XML)")
     print("\n[b] Back to main menu")
     print()
 
     while True:
-        choice = input("Select [1/2/b]: ").strip().lower()
-        if choice in ['1', '2', 'b']:
+        choice = input("Select [1/2/3/b]: ").strip().lower()
+        if choice in ['1', '2', '3', 'b']:
             return choice
-        print("Invalid choice. Please enter 1, 2, or b.")
+        print("Invalid choice. Please enter 1, 2, 3, or b.")
+
+
+def run_prd_import_flow(project_dir: Path) -> bool:
+    """
+    Import PRD from file and convert to app_spec.txt.
+
+    Returns:
+        True if successful, False otherwise
+    """
+    print("\n" + "=" * 50)
+    print("  Import Existing PRD")
+    print("=" * 50)
+
+    # Get PRD file path
+    prd_path = input("\nEnter path to PRD file (Markdown, TXT, or XML): ").strip()
+    if not prd_path:
+        print("Cancelled.")
+        return False
+
+    prd_file = Path(prd_path)
+
+    if not prd_file.exists():
+        print(f"Error: File not found: {prd_file}")
+        return False
+
+    # Read PRD content
+    try:
+        content = prd_file.read_text(encoding='utf-8')
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return False
+
+    spec_file = get_project_prompts_dir(project_dir) / "app_spec.txt"
+
+    # Detect format
+    if content.strip().startswith('<project_specification>'):
+        # Already in XML format
+        print("\nDetected XML format - copying directly...")
+        spec_file.write_text(content, encoding='utf-8')
+        print(f"✓ Imported to {spec_file}")
+        return True
+
+    else:
+        # Markdown or plain text - needs conversion
+        print("\nDetected Markdown/Text format")
+        print("Converting to XML specification format...")
+        print("(Wrapping in <project_specification> tags)\n")
+
+        # Wrap the content in XML tags
+        wrapped_content = f"""<project_specification>
+  <project_name>Imported Project</project_name>
+
+  <description>
+{content}
+  </description>
+
+  <features>
+    <!-- Features will be extracted by the initializer agent from the description above -->
+  </features>
+</project_specification>
+"""
+        spec_file.write_text(wrapped_content, encoding='utf-8')
+        print(f"✓ Imported and wrapped PRD in {spec_file}")
+        print("\nNote: The initializer agent will extract features from your PRD.")
+        return True
 
 
 def create_new_project_flow() -> tuple[str, Path] | None:
@@ -309,10 +406,11 @@ def create_new_project_flow() -> tuple[str, Path] | None:
 
     1. Get project name and path
     2. Create project directory and scaffold prompts
-    3. Ask: Claude or Manual?
+    3. Ask: Claude, Manual, or Import PRD?
     4. If Claude: Run /create-spec with project path
     5. If Manual: Show paths, wait for Enter
-    6. Return (name, path) tuple if successful
+    6. If Import: Import PRD file
+    7. Return (name, path) tuple if successful
     """
     project_info = get_new_project_info()
     if not project_info:
@@ -341,6 +439,14 @@ def create_new_project_flow() -> tuple[str, Path] | None:
         success = run_manual_spec_flow(project_dir)
         if not success:
             return None
+    elif choice == '3':
+        # Import PRD
+        success = run_prd_import_flow(project_dir)
+        if not success:
+            print("\nYou can try again later or use option [1] or [2].")
+            retry = input("Start agent anyway? [y/N]: ").strip().lower()
+            if retry != 'y':
+                return None
 
     return project_name, project_dir
 
@@ -374,6 +480,90 @@ def run_agent(project_name: str, project_dir: Path) -> None:
         print("\n\nAgent interrupted. Run again to resume.")
 
 
+def display_edit_menu(projects: list[tuple[str, Path]]) -> None:
+    """Display projects with edit options."""
+    print("\n" + "-" * 40)
+    print("  Edit Project Settings")
+    print("-" * 40)
+
+    for i, (name, path) in enumerate(projects, 1):
+        print(f"  [{i}] {name} ({path})")
+
+    print("\n  [b] Back to main menu")
+    print()
+
+
+def edit_project_settings(project_name: str, project_path: Path) -> None:
+    """Edit project name or path."""
+    while True:
+        print(f"\n" + "=" * 50)
+        print(f"  Editing: {project_name}")
+        print("=" * 50)
+        print(f"Path: {project_path}")
+        print("\n[1] Rename project")
+        print("[2] Change project folder")
+        print("[3] Delete project")
+        print("[b] Back")
+        print()
+
+        choice = input("Select option: ").strip().lower()
+
+        if choice == '1':
+            new_name = input("\nNew project name: ").strip()
+            if not new_name:
+                print("Cancelled.")
+                continue
+
+            # Validate and update registry
+            try:
+                unregister_project(project_name)
+                register_project(new_name, project_path)
+                print(f"\n✓ Renamed to '{new_name}'")
+                break
+            except Exception as e:
+                # Re-register with old name if something went wrong
+                try:
+                    register_project(project_name, project_path)
+                except:
+                    pass
+                print(f"\nError: {e}")
+
+        elif choice == '2':
+            new_path = input("\nNew project path: ").strip()
+            if not new_path:
+                print("Cancelled.")
+                continue
+
+            # Validate and update
+            try:
+                new_path_obj = Path(new_path).resolve()
+                if not new_path_obj.exists():
+                    print(f"Error: Path does not exist: {new_path_obj}")
+                    continue
+
+                update_project_path(project_name, new_path_obj)
+                print(f"\n✓ Updated path to '{new_path_obj}'")
+                break
+            except Exception as e:
+                print(f"\nError: {e}")
+
+        elif choice == '3':
+            confirm = input(f"\nDelete '{project_name}' from registry? (yes/no): ").strip().lower()
+            if confirm == 'yes':
+                unregister_project(project_name)
+                print(f"\n✓ Deleted '{project_name}' from registry")
+                print("(Project files were not deleted)")
+                break
+            else:
+                print("Cancelled.")
+
+        elif choice == 'b':
+            break
+
+        else:
+            print("Invalid option. Please try again.")
+
+
 def main() -> None:
     """Main entry point."""
     # Ensure we're in the right directory
@@ -402,6 +592,12 @@ def main() -> None:
             if selected:
                 project_name, project_dir = selected
                 run_agent(project_name, project_dir)
+
+        elif choice == '3' and projects:
+            display_edit_menu(projects)
+            selected = get_project_choice(projects)
+            if selected:
+                edit_project_settings(*selected)
 
         else:
             print("Invalid option. Please try again.")

@@ -38,7 +38,7 @@ async def run_agent_session(
     project_dir: Path,
 ) -> tuple[str, str]:
     """
-    Run a single agent session using Claude Agent SDK.
+    Run a single agent session using Claude Agent SDK with progress tracking.
 
     Args:
         client: Claude SDK client
@@ -50,7 +50,17 @@ async def run_agent_session(
         - "continue" if agent should continue working
         - "error" if an error occurred
     """
+    from progress import count_passing_tests
+
     print("Sending prompt to Claude Agent SDK...\n")
+
+    # Track feature creation progress
+    last_feature_count = 0
+    try:
+        _, _, initial_total = count_passing_tests(project_dir)
+        last_feature_count = initial_total
+    except:
+        pass
 
     try:
         # Send the query
@@ -58,6 +68,8 @@ async def run_agent_session(
 
         # Collect response text and show tool use
         response_text = ""
+        last_tool_name = None
+
         async for msg in client.receive_response():
             msg_type = type(msg).__name__
 
@@ -70,6 +82,7 @@ async def run_agent_session(
                         response_text += block.text
                         print(block.text, end="", flush=True)
                     elif block_type == "ToolUseBlock" and hasattr(block, "name"):
+                        last_tool_name = block.name
                         print(f"\n[Tool: {block.name}]", flush=True)
                         if hasattr(block, "input"):
                             input_str = str(block.input)
@@ -97,6 +110,17 @@ async def run_agent_session(
                         else:
                             # Tool succeeded - just show brief confirmation
                             print("   [Done]", flush=True)
+
+                            # Check if this was a feature creation tool
+                            if last_tool_name and "feature_create" in last_tool_name.lower():
+                                try:
+                                    _, _, current_total = count_passing_tests(project_dir)
+                                    if current_total > last_feature_count:
+                                        created = current_total - last_feature_count
+                                        last_feature_count = current_total
+                                        print(f"\n   ✓ Created {created} features ({current_total} total)\n", flush=True)
+                                except:
+                                    pass
 
         print("\n" + "-" * 70 + "\n")
         return "continue", response_text
