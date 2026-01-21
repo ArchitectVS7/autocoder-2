@@ -251,6 +251,45 @@ class TestPerformanceDashboard:
         assert dashboard.test_coverage == 82.5
         assert dashboard.accessibility_score == "WCAG AA"
 
+    def test_calculate_eta(self, metrics_collector):
+        """Test ETA calculation based on velocity."""
+        metrics_collector.set_total_features(100)
+        metrics_collector.start_session(1)
+
+        # Complete 20 features in 2 hours (velocity = 10 features/hour)
+        for i in range(20):
+            metrics_collector.track_feature_complete(
+                feature_id=i,
+                feature_name=f"Feature {i}",
+                first_try=True
+            )
+
+        dashboard = PerformanceDashboard(metrics_collector)
+
+        # Test ETA calculation (private method, but we can test via render output)
+        # With 20/100 complete and velocity of ~10/hour, ETA should be ~8 hours
+        # We'll test by checking that the dashboard has non-zero velocity
+        velocity = metrics_collector.get_current_velocity()
+        assert velocity > 0, "Velocity should be greater than 0"
+
+        # Test edge cases with private method directly
+        # Case 1: Normal progress
+        eta = dashboard._calculate_eta(completed=20, total=100, velocity=10.0)
+        assert "remaining" in eta
+        assert eta != "N/A"
+
+        # Case 2: Zero velocity
+        eta_zero = dashboard._calculate_eta(completed=20, total=100, velocity=0.0)
+        assert eta_zero == "N/A"
+
+        # Case 3: Completed equals total
+        eta_done = dashboard._calculate_eta(completed=100, total=100, velocity=10.0)
+        assert eta_done == "N/A"
+
+        # Case 4: Completed exceeds total
+        eta_over = dashboard._calculate_eta(completed=110, total=100, velocity=10.0)
+        assert eta_over == "N/A"
+
 
 class TestReportGenerator:
     """Test performance report generation."""
