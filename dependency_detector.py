@@ -69,7 +69,7 @@ class DependencyDetector:
         total_detected = 0
 
         for feature in all_features:
-            dependencies = self.detect_dependencies(feature, all_features)
+            dependencies = self._detect_for_feature(feature, all_features)
             total_detected += len(dependencies)
 
             # Store in database
@@ -98,10 +98,76 @@ class DependencyDetector:
         return total_detected
 
     def detect_dependencies(
+        self, feature_or_id, all_features: Optional[List[Feature]] = None
+    ):
+        """
+        Detect dependencies for a single feature.
+
+        Can be called in two ways:
+        1. detect_dependencies(feature_id) - Returns stored FeatureDependency objects from DB
+        2. detect_dependencies(feature, all_features) - Returns dependency dictionaries
+
+        Args:
+            feature_or_id: Either a Feature object or feature ID (int)
+            all_features: Optional list of all features (required if feature_or_id is Feature)
+
+        Returns:
+            If feature_or_id is int: List of FeatureDependency objects from database
+            If feature_or_id is Feature: List of dependency dictionaries
+        """
+        # Case 1: Called with feature ID (integer)
+        if isinstance(feature_or_id, int):
+            feature_id = feature_or_id
+            feature = self.db.query(Feature).filter_by(id=feature_id).first()
+            if not feature:
+                return []
+
+            # Get or detect dependencies
+            all_features = self.db.query(Feature).all()
+            dep_dicts = self._detect_for_feature(feature, all_features)
+
+            # Store in database if not already present
+            for dep_data in dep_dicts:
+                existing = (
+                    self.db.query(FeatureDependency)
+                    .filter_by(
+                        feature_id=feature.id,
+                        depends_on_feature_id=dep_data["depends_on"],
+                    )
+                    .first()
+                )
+
+                if not existing:
+                    dependency = FeatureDependency(
+                        feature_id=feature.id,
+                        depends_on_feature_id=dep_data["depends_on"],
+                        confidence=dep_data["confidence"],
+                        detected_method=dep_data["method"],
+                        detected_keywords=dep_data.get("keywords"),
+                    )
+                    self.db.add(dependency)
+
+            self.db.commit()
+
+            # Return FeatureDependency objects
+            return (
+                self.db.query(FeatureDependency)
+                .filter_by(feature_id=feature_id)
+                .all()
+            )
+
+        # Case 2: Called with Feature object (original behavior)
+        else:
+            feature = feature_or_id
+            if all_features is None:
+                raise ValueError("all_features is required when passing a Feature object")
+            return self._detect_for_feature(feature, all_features)
+
+    def _detect_for_feature(
         self, feature: Feature, all_features: List[Feature]
     ) -> List[Dict]:
         """
-        Detect dependencies for a single feature.
+        Internal method to detect dependencies for a single feature.
 
         Args:
             feature: The feature to analyze

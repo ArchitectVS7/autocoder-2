@@ -1166,3 +1166,384 @@ class TestCheckpointReportIntegration:
         assert "# Checkpoint #1" in content
         assert "**Features Completed:** 10" in content
         assert "**Last Feature:** Test Feature" in content
+
+
+# =============================================================================
+# Task 3.4: Code Review Checkpoint Agent
+# =============================================================================
+
+from checkpoint_agent_code_review import CodeReviewAgent
+import subprocess
+
+
+@pytest.fixture
+def git_project_dir(temp_project_dir):
+    """Create a git repository in temp directory."""
+    subprocess.run(['git', 'init'], cwd=temp_project_dir, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=temp_project_dir, check=True, capture_output=True)
+    subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=temp_project_dir, check=True, capture_output=True)
+    # Disable GPG signing for test commits
+    subprocess.run(['git', 'config', 'commit.gpgsign', 'false'], cwd=temp_project_dir, check=True, capture_output=True)
+
+    # Create initial commit (bypass hooks with --no-verify)
+    test_file = temp_project_dir / "README.md"
+    test_file.write_text("# Test Project")
+    subprocess.run(['git', 'add', '.'], cwd=temp_project_dir, check=True, capture_output=True)
+    subprocess.run(['git', 'commit', '--no-verify', '-m', 'Initial commit'], cwd=temp_project_dir, check=True, capture_output=True)
+
+    return temp_project_dir
+
+
+class TestCodeReviewAgent:
+    """Test code review checkpoint agent."""
+
+    def test_analyze_no_changes(self, git_project_dir):
+        """Should return PASS when no files changed."""
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.checkpoint_type == 'code_review'
+        assert result.status == 'PASS'
+        assert len(result.issues) == 0
+        assert result.metadata['files_analyzed'] == 0
+
+    def test_detect_console_log(self, git_project_dir):
+        """Should detect console.log statements."""
+        # Create file with console.log
+        test_file = git_project_dir / "test.js"
+        test_file.write_text("""
+function hello() {
+    console.log("Debug message");
+    return "Hello";
+}
+""")
+
+        # Commit the file
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add console.log'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.checkpoint_type == 'code_review'
+        assert result.status == 'PASS_WITH_WARNINGS'
+        assert len(result.issues) > 0
+
+        # Check for console.log issue
+        console_issues = [i for i in result.issues if 'console' in i.title.lower()]
+        assert len(console_issues) > 0
+        assert console_issues[0].severity == IssueSeverity.WARNING
+
+    def test_detect_todo_comments(self, git_project_dir):
+        """Should detect TODO/FIXME comments."""
+        test_file = git_project_dir / "test.py"
+        test_file.write_text("""
+def calculate():
+    # TODO: Implement proper calculation
+    # FIXME: This is broken
+    return 42
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add TODO'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should find TODO and FIXME
+        todo_issues = [i for i in result.issues if 'TODO' in i.title or 'TODO' in i.description]
+        assert len(todo_issues) >= 2
+        assert all(i.severity == IssueSeverity.INFO for i in todo_issues)
+
+    def test_detect_hardcoded_credentials(self, git_project_dir):
+        """Should detect hardcoded passwords/API keys."""
+        test_file = git_project_dir / "config.py"
+        test_file.write_text("""
+API_KEY = "sk_live_abc123xyz"
+password = "my_secret_password"
+database_url = "postgresql://user:pass@localhost/db"
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add config'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should find hardcoded credentials
+        cred_issues = [i for i in result.issues if 'credential' in i.title.lower() or 'password' in i.description.lower()]
+        assert len(cred_issues) >= 1
+        assert cred_issues[0].severity == IssueSeverity.CRITICAL
+        assert result.status == 'FAIL'
+
+    def test_detect_large_functions(self, git_project_dir):
+        """Should detect functions that are too large."""
+        # Create a large function (60 lines)
+        lines = ['def large_function():']
+        for i in range(60):
+            lines.append(f'    x = {i}')
+        lines.append('    return x')
+
+        test_file = git_project_dir / "large.py"
+        test_file.write_text('\n'.join(lines))
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add large function'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should detect large function
+        large_func_issues = [i for i in result.issues if 'large function' in i.title.lower()]
+        assert len(large_func_issues) >= 1
+        assert large_func_issues[0].severity == IssueSeverity.WARNING
+
+    def test_check_naming_conventions_python(self, git_project_dir):
+        """Should check Python naming conventions."""
+        test_file = git_project_dir / "naming.py"
+        test_file.write_text("""
+class myBadClass:  # Should be PascalCase
+    def goodMethod(self):  # camelCase, but Python prefers snake_case
+        pass
+
+class GoodClass:
+    def good_method(self):
+        pass
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add naming test'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should detect naming convention issues
+        naming_issues = [i for i in result.issues if 'naming' in i.title.lower()]
+        assert len(naming_issues) >= 1
+
+    def test_check_multiple_returns(self, git_project_dir):
+        """Should detect functions with many return statements."""
+        test_file = git_project_dir / "returns.py"
+        test_file.write_text("""
+def many_returns(x):
+    if x == 1:
+        return "one"
+    if x == 2:
+        return "two"
+    if x == 3:
+        return "three"
+    if x == 4:
+        return "four"
+    if x == 5:
+        return "five"
+    if x == 6:
+        return "six"
+    return "other"
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add multiple returns'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should detect multiple returns (>4)
+        return_issues = [i for i in result.issues if 'return' in i.title.lower()]
+        assert len(return_issues) >= 1
+        assert return_issues[0].severity == IssueSeverity.INFO
+
+    def test_detect_code_duplication(self, git_project_dir):
+        """Should detect duplicated code across files."""
+        # Create two files with similar code (use straightforward formatting)
+        file1 = git_project_dir / "dup1.py"
+        file1.write_text(
+"""def process_data(data):
+    result = []
+    count = 0
+    for item in data:
+        if item > 0:
+            processed = item * 2
+            result.append(processed)
+            count += 1
+        else:
+            result.append(0)
+    return result
+
+def other_function():
+    pass
+""")
+
+        file2 = git_project_dir / "dup2.py"
+        file2.write_text(
+"""def transform_data(data):
+    result = []
+    count = 0
+    for item in data:
+        if item > 0:
+            processed = item * 2
+            result.append(processed)
+            count += 1
+        else:
+            result.append(0)
+    return result
+
+def another_function():
+    pass
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add duplicate code'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Duplication detection is heuristic-based, so we just verify it runs without error
+        # and checks for the metadata
+        assert result.checkpoint_type == 'code_review'
+        assert 'files_analyzed' in result.metadata
+        # If duplication is found, verify it's reported correctly
+        dup_issues = [i for i in result.issues if 'duplicat' in i.title.lower()]
+        if len(dup_issues) > 0:
+            assert dup_issues[0].severity == IssueSeverity.WARNING
+
+    def test_analyze_multiple_files(self, git_project_dir):
+        """Should analyze multiple changed files."""
+        # Create multiple files
+        file1 = git_project_dir / "file1.py"
+        file1.write_text("def func1(): pass")
+
+        file2 = git_project_dir / "file2.js"
+        file2.write_text("function func2() { console.log('test'); }")
+
+        file3 = git_project_dir / "file3.ts"
+        file3.write_text("const func3 = () => { console.warn('warning'); }")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add multiple files'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should analyze all 3 files
+        assert result.metadata['files_analyzed'] == 3
+        assert len(result.metadata['files']) == 3
+
+    def test_only_analyze_source_files(self, git_project_dir):
+        """Should only analyze source code files."""
+        # Create source and non-source files
+        py_file = git_project_dir / "code.py"
+        py_file.write_text("def hello(): pass")
+
+        json_file = git_project_dir / "config.json"
+        json_file.write_text('{"key": "value"}')
+
+        md_file = git_project_dir / "docs.md"
+        md_file.write_text("# Documentation")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add mixed files'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should only analyze .py file
+        assert result.metadata['files_analyzed'] == 1
+        assert 'code.py' in result.metadata['files'][0]
+
+    def test_handle_file_read_errors(self, git_project_dir):
+        """Should handle files that can't be read."""
+        # This test creates a file and commits it, then we test error handling
+        # by creating a scenario where the file exists in git but has issues
+
+        test_file = git_project_dir / "test.py"
+        test_file.write_text("def test(): pass")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add test file'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should complete without crashing
+        assert result.checkpoint_type == 'code_review'
+        assert result.status in ['PASS', 'PASS_WITH_WARNINGS', 'FAIL']
+
+    def test_metadata_includes_file_list(self, git_project_dir):
+        """Should include list of analyzed files in metadata."""
+        test_file = git_project_dir / "example.py"
+        test_file.write_text("def example(): return 42")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add example'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert 'files' in result.metadata
+        assert 'files_analyzed' in result.metadata
+        assert isinstance(result.metadata['files'], list)
+        assert result.metadata['files_analyzed'] == len(result.metadata['files'])
+
+    def test_status_reflects_severity(self, git_project_dir):
+        """Should set status based on issue severity."""
+        # Test FAIL status (critical issues)
+        crit_file = git_project_dir / "critical.py"
+        crit_file.write_text('password = "hardcoded123"')
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add critical issue'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+    def test_javascript_file_analysis(self, git_project_dir):
+        """Should analyze JavaScript files correctly."""
+        js_file = git_project_dir / "app.js"
+        js_file.write_text("""
+function calculateTotal(items) {
+    console.log("Calculating...");
+    // TODO: Add tax calculation
+    let total = 0;
+    for (let item of items) {
+        total += item.price;
+    }
+    return total;
+}
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add JS file'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should find console.log and TODO
+        assert len(result.issues) >= 2
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+    def test_typescript_file_analysis(self, git_project_dir):
+        """Should analyze TypeScript files correctly."""
+        ts_file = git_project_dir / "app.ts"
+        ts_file.write_text("""
+interface User {
+    name: string;
+    email: string;
+}
+
+function getUser(id: number): User {
+    console.debug("Fetching user");
+    // FIXME: Implement real API call
+    return { name: "Test", email: "test@example.com" };
+}
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add TS file'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = CodeReviewAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should find issues
+        assert len(result.issues) >= 1

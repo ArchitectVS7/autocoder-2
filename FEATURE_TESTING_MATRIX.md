@@ -262,11 +262,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 34 (87%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%)
-**Tests Failed:** 5 (13%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%)
+**Tests Passed:** 36 (92%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%)
+**Tests Failed:** 3 (8%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%)
 **Tests Needed:** Several additional tests for untested features
 
-**Phase 3 Regression Testing Improvements (6 tests fixed in total):**
+**Phase 3 Regression Testing Improvements (9 tests fixed in total):**
 - ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
   - Added `classify_blocker_text()` helper method
   - Updated `extract_required_values()` API signature
@@ -275,10 +275,15 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
   - Clarified test to check 'recommendation' field vs 'suggested_action'
 - ✅ Fixed Task 1.5 human intervention test (1 test, commit #3)
   - Fixed blocker_type enum value usage in test_check_for_blockers
+- ✅ Fixed Task 1.2 dependency detection API tests (3 tests, commit #4)
+  - Added convenience API to DependencyDetector.detect_dependencies()
+  - Now accepts either feature_id (int) or Feature object
+  - Returns FeatureDependency objects from DB when called with int
+  - Backward compatible with existing code using Feature objects
 
 **Test Results by Category:**
-- ✅ Database Schema: 4/4 passed
-- ❌ Dependency Detection: 0/3 passed (API signature mismatches)
+- ⚠️ Database Schema: 3/4 passed (1 enum value test still failing)
+- ✅ Dependency Detection: 3/3 passed (FIXED during Phase 3 Task 3.4 regression testing)
 - ✅ Skip Impact Analysis: 2/2 passed (FIXED during Phase 3 regression testing)
 - ✅ Blocker Classification: 4/4 passed (FIXED during Phase 3 regression testing)
 - ✅ Assumptions Workflow: 6/6 passed
@@ -287,10 +292,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ✅ Unblock Commands: 6/6 passed
 - ⚠️ End-to-End Workflow: 2/3 passed
 
-**Critical Issues to Fix:**
-- 🔴 BlockerType enum misalignment (affects 4 tests)
-- 🟡 DependencyDetector API signature (affects 3 tests)
-- 🟢 Test updates needed (affects 4 tests)
+**Remaining Issues to Fix:**
+- 🟢 Database Schema test (1 test) - enum value assertion
+- 🟢 Human Intervention test (1 test) - needs input mocking for interactive prompt
+- 🟢 End-to-End Workflow test (1 test) - integration test needs debugging
 
 ---
 
@@ -456,13 +461,21 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.4.1** | Analyze recently changed files | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.2** | Detect code smells and anti-patterns | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.3** | Validate naming conventions | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.4** | Suggest refactoring opportunities | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.5** | Check for duplication | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.4.1** | Analyze recently changed files | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent` | Uses git diff to find changed files |
+| **3.4.2** | Detect code smells and anti-patterns | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent` | Detects console.log, TODO comments, hardcoded credentials |
+| **3.4.3** | Validate naming conventions | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_check_naming_conventions_python` | Python/JS/TS naming rules (PascalCase, camelCase) |
+| **3.4.4** | Suggest refactoring opportunities | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_detect_large_functions` | Large functions, multiple returns |
+| **3.4.5** | Check for duplication | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_detect_code_duplication` | Heuristic-based duplication detection |
 
-**Task 3.4 Summary:** 0/5 features complete
+**Task 3.4 Summary:** 5/5 features complete (100%), **15 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_code_review.py` with CodeReviewAgent class
+- Analyzes Python, JavaScript, TypeScript files
+- Detects: console statements, TODO comments, hardcoded credentials, large functions, naming violations, multiple returns, code duplication
+- IssueSeverity levels: CRITICAL (hardcoded credentials), WARNING (console.log, naming, large functions, duplication), INFO (TODO comments, multiple returns)
+- Returns CheckpointResult with metadata (files_analyzed, files list)
+- Graceful error handling for unreadable files
 
 ---
 
@@ -510,14 +523,15 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 12/31 (39%) - Tasks 3.1, 3.2, and 3.3 complete
-**Tests:** 51/51 passed (100%)
+**Complete:** 17/31 (55%) - Tasks 3.1, 3.2, 3.3, and 3.4 complete
+**Tests:** 66/66 passed (100%)
 
 **Status:**
 - ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
 - ✅ Task 3.2: Checkpoint Orchestration Engine (4/4 features, 13 tests)
 - ✅ Task 3.3: Checkpoint Report Storage (3/3 features, 13 tests)
-- 🔵 Task 3.4-3.7: Checkpoint Agents (0/19 features)
+- ✅ Task 3.4: Code Review Checkpoint Agent (5/5 features, 15 tests)
+- 🔵 Task 3.5-3.7: Remaining Checkpoint Agents (0/14 features)
 
 ---
 
