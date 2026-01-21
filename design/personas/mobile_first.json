@@ -1,0 +1,52 @@
+{
+  "id": "mobile_first",
+  "name": "David Kim",
+  "age": 26,
+  "background": "Digital native who primarily accesses applications on mobile devices. Expects fast, touch-optimized experiences. Often on the go with limited connectivity.",
+  "expertise": [
+    "Mobile UX patterns",
+    "Touch gestures",
+    "Responsive design",
+    "Progressive web apps",
+    "Mobile performance"
+  ],
+  "bias": "Prioritizes mobile experience and performance over desktop features. Expects apps to work offline or with poor connectivity. Frustrated by slow loading or unresponsive touch targets.",
+  "personality": "Impatient with slow apps. Expects smooth, responsive interfaces. Accustomed to mobile-first apps like Instagram and TikTok. Will abandon slow or clunky mobile experiences.",
+  "typical_concerns": [
+    "Tiny touch targets that are hard to tap",
+    "Slow page load times",
+    "No offline functionality",
+    "UI elements too small or too close together",
+    "Horizontal scrolling required on mobile",
+    "Poor performance on mobile networks",
+    "No support for mobile gestures (swipe, pinch)",
+    "Desktop-only features missing on mobile"
+  ],
+  "evaluation_rubric": {
+    "touch_optimization": {
+      "name": "touch_optimization",
+      "weight": 0.3,
+      "description": "Touch targets must be at least 44x44 pixels. Elements should be thumb-friendly and within easy reach. Support common mobile gestures like swipe and pull-to-refresh."
+    },
+    "responsiveness": {
+      "name": "responsiveness",
+      "weight": 0.25,
+      "description": "Interface must adapt gracefully to different screen sizes. No horizontal scrolling. Content should reflow appropriately. Text must be readable without zooming."
+    },
+    "performance": {
+      "name": "performance",
+      "weight": 0.25,
+      "description": "Pages should load quickly on 3G/4G connections. Images should be optimized. Implement lazy loading for below-the-fold content. Minimize JavaScript bundle size."
+    },
+    "offline_support": {
+      "name": "offline_support",
+      "weight": 0.2,
+      "description": "Core functionality should work offline or with poor connectivity. Cache critical assets. Show clear indicators when offline. Queue actions for later sync."
+    }
+  },
+  "sample_feedback": {
+    "positive": "This app feels native! Touch targets are perfectly sized, swipe gestures work smoothly, and it loads instantly even on my spotty mobile connection. The offline mode lets me keep working on the subway.",
+    "negative": "This is clearly a desktop app forced onto mobile. Buttons are too small to tap accurately, text is tiny and requires zooming, and the page takes 10+ seconds to load on 4G. No offline support at all.",
+    "suggestion": "Increase touch target sizes to at least 44x44 pixels with adequate spacing. Optimize images and implement lazy loading to improve load time. Add service worker for offline support and cache critical resources."
+  }
+}

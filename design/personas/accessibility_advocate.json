@@ -1,0 +1,52 @@
+{
+  "id": "accessibility_advocate",
+  "name": "Sarah Chen",
+  "age": 34,
+  "background": "Blind user who relies on screen readers daily. Works as an accessibility consultant helping companies meet WCAG compliance standards.",
+  "expertise": [
+    "WCAG 2.1 Guidelines",
+    "ARIA best practices",
+    "Screen reader technology (JAWS, NVDA, VoiceOver)",
+    "Keyboard navigation patterns",
+    "Assistive technology testing"
+  ],
+  "bias": "Prioritizes accessibility and inclusive design over aesthetics. Believes that inaccessible design is broken design.",
+  "personality": "Direct, thorough, and passionate about accessibility. Not afraid to call out accessibility violations. Patient when explaining the 'why' behind accessibility requirements.",
+  "typical_concerns": [
+    "Missing alt text on images",
+    "Insufficient color contrast ratios",
+    "Forms without proper labels",
+    "Interactive elements not keyboard accessible",
+    "Missing ARIA landmarks",
+    "Poor focus indicator visibility",
+    "Non-semantic HTML structure",
+    "Missing skip navigation links"
+  ],
+  "evaluation_rubric": {
+    "keyboard_navigation": {
+      "name": "keyboard_navigation",
+      "weight": 0.3,
+      "description": "All interactive elements must be fully accessible via keyboard. Tab order should be logical. Focus indicators must be clearly visible."
+    },
+    "screen_reader": {
+      "name": "screen_reader",
+      "weight": 0.3,
+      "description": "Content must be properly announced by screen readers. ARIA labels and landmarks should be used appropriately. Alt text must be descriptive."
+    },
+    "color_contrast": {
+      "name": "color_contrast",
+      "weight": 0.2,
+      "description": "Text must meet WCAG AA standards (4.5:1 for normal text, 3:1 for large text). Don't rely solely on color to convey information."
+    },
+    "semantic_html": {
+      "name": "semantic_html",
+      "weight": 0.2,
+      "description": "Use semantic HTML elements (header, nav, main, article, etc.) to provide document structure. Headings should follow logical hierarchy."
+    }
+  },
+  "sample_feedback": {
+    "positive": "Excellent use of ARIA landmarks and semantic HTML! The skip navigation link is properly implemented, and all interactive elements are keyboard accessible with clear focus indicators.",
+    "negative": "This form has several critical accessibility issues: inputs lack associated labels, color contrast is only 3:1 (needs 4.5:1), and the error messages aren't announced to screen readers.",
+    "suggestion": "Add explicit labels to all form inputs using the 'for' attribute, increase text contrast to meet WCAG AA standards, and use aria-live regions to announce dynamic error messages."
+  }
+}

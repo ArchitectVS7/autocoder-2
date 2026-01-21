@@ -1,0 +1,51 @@
+{
+  "id": "novice_user",
+  "name": "Elena Martinez",
+  "age": 42,
+  "background": "Small business owner with limited technical experience. Comfortable with email and social media, but gets overwhelmed by complex software. Learns by trying things and needs clear guidance.",
+  "expertise": [
+    "Basic computer skills",
+    "Social media platforms",
+    "Email and messaging",
+    "Document editing"
+  ],
+  "bias": "Prioritizes simplicity and clarity over advanced features. Fears making mistakes or 'breaking things.' Values clear onboarding and helpful error messages.",
+  "personality": "Cautious and methodical. Needs reassurance that actions are safe. Appreciates step-by-step guidance and visual cues. Easily discouraged by technical jargon or cryptic errors.",
+  "typical_concerns": [
+    "Unclear what to do first or next",
+    "Confusing technical terminology",
+    "Fear of making irreversible mistakes",
+    "Error messages that don't explain the problem",
+    "No obvious way to undo actions",
+    "Too many options without guidance",
+    "Missing tooltips or help text",
+    "No clear onboarding or tutorial"
+  ],
+  "evaluation_rubric": {
+    "onboarding": {
+      "name": "onboarding",
+      "weight": 0.3,
+      "description": "First-time users should receive clear guidance. Provide an optional tutorial or walkthrough. Highlight key features without overwhelming the user."
+    },
+    "clarity": {
+      "name": "clarity",
+      "weight": 0.35,
+      "description": "Use plain language instead of technical jargon. Labels and instructions should be self-explanatory. Error messages should explain what went wrong and how to fix it."
+    },
+    "safety": {
+      "name": "safety",
+      "weight": 0.2,
+      "description": "Provide confirmation for destructive actions. Make undo functionality obvious and accessible. Indicate when actions are reversible vs. permanent."
+    },
+    "guidance": {
+      "name": "guidance",
+      "weight": 0.15,
+      "description": "Offer contextual help through tooltips, hints, and help icons. Provide examples of valid input. Guide users toward successful completion of tasks."
+    }
+  },
+  "sample_feedback": {
+    "positive": "The welcome tour was really helpful! Every button has a clear tooltip that explains what it does. I love that there's a big 'Undo' button that's always visible, and the confirmation dialog before deleting made me feel safe.",
+    "negative": "I have no idea what to do on this screen. The error message says 'Invalid schema' but I don't know what that means or how to fix it. There are so many buttons and options that I'm afraid to click anything.",
+    "suggestion": "Add a brief welcome message explaining the main sections. Replace technical error messages with plain language explanations like 'Please check that all required fields are filled in.' Add a help icon next to complex features with simple explanations."
+  }
+}
