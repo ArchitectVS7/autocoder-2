@@ -508,3 +508,324 @@ verbose_logging: true
             features_completed=15,
             feature_name="OAuth authentication setup"
         ) is True
+
+
+# =============================================================================
+# Task 3.2: Checkpoint Orchestration Engine
+# =============================================================================
+
+import asyncio
+from checkpoint_orchestrator import (
+    CheckpointOrchestrator,
+    CheckpointDecision,
+    CheckpointResult,
+    CheckpointIssue,
+    IssueSeverity,
+    run_checkpoint_if_needed
+)
+
+
+class TestCheckpointOrchestrator:
+    """Test checkpoint orchestration engine."""
+
+    def test_should_run_checkpoint_delegates_to_config(self, temp_project_dir):
+        """Should delegate checkpoint detection to configuration."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(enabled=True, frequency=10)
+        )
+
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        assert orchestrator.should_run_checkpoint(features_completed=10) is True
+        assert orchestrator.should_run_checkpoint(features_completed=5) is False
+        assert orchestrator.should_run_checkpoint(features_completed=20) is True
+
+    @pytest.mark.asyncio
+    async def test_run_checkpoint_executes_enabled_checkpoints(self, temp_project_dir):
+        """Should run all enabled checkpoint agents."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(
+                enabled=True,
+                frequency=10,
+                types=CheckpointTypes(
+                    code_review=True,
+                    security_audit=True,
+                    performance_check=False,
+                    accessibility_check=False
+                )
+            )
+        )
+
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+        result = await orchestrator.run_checkpoint(features_completed=10)
+
+        # Should have results for enabled checkpoints only
+        assert len(result.results) == 2
+        checkpoint_types = [r.checkpoint_type for r in result.results]
+        assert 'code_review' in checkpoint_types
+        assert 'security_audit' in checkpoint_types
+        assert 'performance_check' not in checkpoint_types
+
+    @pytest.mark.asyncio
+    async def test_run_checkpoint_when_no_checkpoints_enabled(self, temp_project_dir):
+        """Should handle case when no checkpoints enabled."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(
+                enabled=True,
+                types=CheckpointTypes(
+                    code_review=False,
+                    security_audit=False,
+                    performance_check=False,
+                    accessibility_check=False
+                )
+            )
+        )
+
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+        result = await orchestrator.run_checkpoint(features_completed=10)
+
+        assert len(result.results) == 0
+        assert result.decision == CheckpointDecision.CONTINUE
+
+
+class TestResultAggregation:
+    """Test checkpoint result aggregation."""
+
+    @pytest.mark.asyncio
+    async def test_aggregate_results_counts_issues(self, temp_project_dir):
+        """Should correctly count issues by severity."""
+        config = AutocoderConfig()
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        # Mock some results
+        results = [
+            CheckpointResult(
+                checkpoint_type='code_review',
+                status='PASS_WITH_WARNINGS',
+                issues=[
+                    CheckpointIssue(
+                        severity=IssueSeverity.WARNING,
+                        checkpoint_type='code_review',
+                        title='Duplicated code',
+                        description='Found duplicate logic'
+                    ),
+                    CheckpointIssue(
+                        severity=IssueSeverity.INFO,
+                        checkpoint_type='code_review',
+                        title='Good naming',
+                        description='Naming conventions followed'
+                    )
+                ]
+            ),
+            CheckpointResult(
+                checkpoint_type='security_audit',
+                status='FAIL',
+                issues=[
+                    CheckpointIssue(
+                        severity=IssueSeverity.CRITICAL,
+                        checkpoint_type='security_audit',
+                        title='SQL Injection',
+                        description='Unescaped user input'
+                    )
+                ]
+            )
+        ]
+
+        aggregated = orchestrator._aggregate_results(results, 10, 500.0)
+
+        assert aggregated.total_critical == 1
+        assert aggregated.total_warnings == 1
+        assert aggregated.total_info == 1
+        assert aggregated.features_completed == 10
+
+    @pytest.mark.asyncio
+    async def test_aggregate_empty_results(self, temp_project_dir):
+        """Should handle empty results list."""
+        config = AutocoderConfig()
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        aggregated = orchestrator._aggregate_results([], 5, 0.0)
+
+        assert aggregated.total_critical == 0
+        assert aggregated.total_warnings == 0
+        assert aggregated.total_info == 0
+
+
+class TestDecisionLogic:
+    """Test checkpoint decision-making logic."""
+
+    def test_decision_pause_on_critical_issues(self, temp_project_dir):
+        """Should pause when critical issues found and auto-pause enabled."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(auto_pause_on_critical=True)
+        )
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        aggregated = orchestrator._aggregate_results(
+            [CheckpointResult(
+                checkpoint_type='security_audit',
+                status='FAIL',
+                issues=[
+                    CheckpointIssue(
+                        severity=IssueSeverity.CRITICAL,
+                        checkpoint_type='security_audit',
+                        title='Critical security flaw',
+                        description='Must fix immediately'
+                    )
+                ]
+            )],
+            10,
+            100.0
+        )
+
+        decision = orchestrator._make_decision(aggregated)
+
+        assert decision == CheckpointDecision.PAUSE
+
+    def test_decision_continue_with_warnings_when_auto_pause_disabled(self, temp_project_dir):
+        """Should continue with warnings when auto-pause disabled even with critical issues."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(auto_pause_on_critical=False)
+        )
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        aggregated = orchestrator._aggregate_results(
+            [CheckpointResult(
+                checkpoint_type='security_audit',
+                status='FAIL',
+                issues=[
+                    CheckpointIssue(
+                        severity=IssueSeverity.CRITICAL,
+                        checkpoint_type='security_audit',
+                        title='Issue',
+                        description='Description'
+                    )
+                ]
+            )],
+            10,
+            100.0
+        )
+
+        decision = orchestrator._make_decision(aggregated)
+
+        assert decision == CheckpointDecision.CONTINUE_WITH_WARNINGS
+
+    def test_decision_continue_with_warnings_on_warnings(self, temp_project_dir):
+        """Should continue with warnings when only warnings present."""
+        config = AutocoderConfig()
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        aggregated = orchestrator._aggregate_results(
+            [CheckpointResult(
+                checkpoint_type='code_review',
+                status='PASS_WITH_WARNINGS',
+                issues=[
+                    CheckpointIssue(
+                        severity=IssueSeverity.WARNING,
+                        checkpoint_type='code_review',
+                        title='Minor issue',
+                        description='Could be improved'
+                    )
+                ]
+            )],
+            10,
+            100.0
+        )
+
+        decision = orchestrator._make_decision(aggregated)
+
+        assert decision == CheckpointDecision.CONTINUE_WITH_WARNINGS
+
+    def test_decision_continue_when_all_clear(self, temp_project_dir):
+        """Should continue when no issues found."""
+        config = AutocoderConfig()
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        aggregated = orchestrator._aggregate_results(
+            [CheckpointResult(
+                checkpoint_type='code_review',
+                status='PASS',
+                issues=[]
+            )],
+            10,
+            100.0
+        )
+
+        decision = orchestrator._make_decision(aggregated)
+
+        assert decision == CheckpointDecision.CONTINUE
+
+
+class TestConvenienceFunction:
+    """Test convenience function for checkpoint execution."""
+
+    @pytest.mark.asyncio
+    async def test_run_checkpoint_if_needed_runs_when_conditions_met(self, temp_project_dir):
+        """Should run checkpoint when conditions are met."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(enabled=True, frequency=10)
+        )
+
+        result = await run_checkpoint_if_needed(
+            temp_project_dir,
+            features_completed=10,
+            config=config
+        )
+
+        assert result is not None
+        assert result.features_completed == 10
+        assert result.checkpoint_number == 1
+
+    @pytest.mark.asyncio
+    async def test_run_checkpoint_if_needed_skips_when_not_needed(self, temp_project_dir):
+        """Should return None when checkpoint not needed."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(enabled=True, frequency=10)
+        )
+
+        result = await run_checkpoint_if_needed(
+            temp_project_dir,
+            features_completed=5,
+            config=config
+        )
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_run_checkpoint_if_needed_with_milestone_trigger(self, temp_project_dir):
+        """Should run checkpoint on milestone trigger."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(
+                enabled=True,
+                frequency=100,  # High frequency, won't trigger
+                triggers=[CheckpointTrigger(milestone="authentication")]
+            )
+        )
+
+        result = await run_checkpoint_if_needed(
+            temp_project_dir,
+            features_completed=5,
+            feature_name="OAuth authentication",
+            config=config
+        )
+
+        assert result is not None
+        assert result.checkpoint_number == 1
+
+
+class TestCheckpointCounter:
+    """Test checkpoint numbering."""
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_counter_increments(self, temp_project_dir):
+        """Should increment checkpoint counter on each run."""
+        config = AutocoderConfig()
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+
+        result1 = await orchestrator.run_checkpoint(features_completed=10)
+        result2 = await orchestrator.run_checkpoint(features_completed=20)
+        result3 = await orchestrator.run_checkpoint(features_completed=30)
+
+        assert result1.checkpoint_number == 1
+        assert result2.checkpoint_number == 2
+        assert result3.checkpoint_number == 3

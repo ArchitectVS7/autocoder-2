@@ -169,10 +169,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 |------------|-------------------|---------------|----------------|---------------|-------|
 | **1.3.1** | analyze_skip_impact() with cascade depth | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_analyze_skip_with_dependents` | Test passed ✅ |
 | **1.3.2** | get_dependent_features() recursive tree | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
-| **1.3.3** | Recommendation system (SAFE_TO_SKIP, CASCADE_SKIP, IMPLEMENT_WITH_MOCKS, REVIEW_DEPENDENCIES) | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_skip_recommendations` | Return value structure mismatch |
+| **1.3.3** | Recommendation system (SAFE_TO_SKIP, CASCADE_SKIP, IMPLEMENT_WITH_MOCKS, REVIEW_DEPENDENCIES) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_skip_recommendations` | **FIXED:** Test now checks 'recommendation' field (full strings) vs 'suggested_action' (short codes) |
 | **1.3.4** | Impact report formatting with tree visualization | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
 
-**Task 1.3 Summary:** 4/4 features complete, 1/2 tests passed (1 failed), 2/4 need tests
+**Task 1.3 Summary:** 4/4 features complete, 2/2 tests passed ✅ (regression testing during Phase 3), 2/4 need tests
 
 ---
 
@@ -262,20 +262,22 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 32 (82%) ⬆️ improved from 28 (72%)
-**Tests Failed:** 7 (18%) ⬇️ reduced from 11 (28%)
+**Tests Passed:** 33 (85%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%)
+**Tests Failed:** 6 (15%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%)
 **Tests Needed:** Several additional tests for untested features
 
-**Phase 3 Regression Testing Improvements (4 tests fixed):**
-- ✅ Fixed Task 1.4 blocker classification tests (4 tests now passing)
-- Added `classify_blocker_text()` helper method
-- Updated `extract_required_values()` API signature
-- Refined keyword classification to avoid false positives
+**Phase 3 Regression Testing Improvements (5 tests fixed in total):**
+- ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
+  - Added `classify_blocker_text()` helper method
+  - Updated `extract_required_values()` API signature
+  - Refined keyword classification to avoid false positives
+- ✅ Fixed Task 1.3 skip impact analysis test (1 test, commit #2)
+  - Clarified test to check 'recommendation' field vs 'suggested_action'
 
 **Test Results by Category:**
 - ✅ Database Schema: 4/4 passed
 - ❌ Dependency Detection: 0/3 passed (API signature mismatches)
-- ⚠️ Skip Impact Analysis: 1/2 passed
+- ✅ Skip Impact Analysis: 2/2 passed (FIXED during Phase 3 regression testing)
 - ✅ Blocker Classification: 4/4 passed (FIXED during Phase 3 regression testing)
 - ✅ Assumptions Workflow: 6/6 passed
 - ⚠️ Human Intervention: 3/5 passed (enum issue + input mocking)
@@ -409,12 +411,22 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.2.1** | should_run_checkpoint() trigger detection | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.2** | run_checkpoint() parallel execution | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.3** | Result aggregation | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.4** | Decision logic (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.2.1** | should_run_checkpoint() trigger detection | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointOrchestrator` | Delegates to config.should_run_checkpoint() |
+| **3.2.2** | run_checkpoint() parallel execution | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointOrchestrator` | Runs enabled checkpoints in parallel with asyncio.gather |
+| **3.2.3** | Result aggregation | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestResultAggregation` | Counts issues by severity, tracks execution time |
+| **3.2.4** | Decision logic (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestDecisionLogic` | 4 tests - pause on critical, auto-pause disabled, warnings, all clear |
 
-**Task 3.2 Summary:** 0/4 features complete
+**Task 3.2 Summary:** 4/4 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_orchestrator.py` with async checkpoint execution
+- CheckpointResult and CheckpointIssue dataclasses for structured results
+- IssueSeverity enum (CRITICAL, WARNING, INFO)
+- CheckpointDecision enum (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS)
+- Automatic issue counting and aggregation
+- Handles checkpoint agent exceptions gracefully
+- Formatted console output with colored emojis
+- run_checkpoint_if_needed() convenience function
 
 ---
 
@@ -488,12 +500,12 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 5/31 (16%) - Task 3.1 complete
-**Tests:** 25/25 passed (100%) - All Task 3.1 tests passing
+**Complete:** 9/31 (29%) - Tasks 3.1 and 3.2 complete
+**Tests:** 38/38 passed (100%)
 
 **Status:**
 - ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
-- 🔵 Task 3.2: Checkpoint Orchestration Engine (0/4 features)
+- ✅ Task 3.2: Checkpoint Orchestration Engine (4/4 features, 13 tests)
 - 🔵 Task 3.3: Checkpoint Report Storage (0/3 features)
 - 🔵 Task 3.4-3.7: Checkpoint Agents (0/19 features)
 
