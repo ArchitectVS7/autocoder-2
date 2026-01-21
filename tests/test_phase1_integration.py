@@ -435,6 +435,411 @@ class TestAssumptionsWorkflow:
         assert 0 <= stats['accuracy_rate'] <= 100
 
 
+class TestHumanInterventionWorkflow:
+    """Test human intervention workflow (Task 1.5)."""
+
+    def test_check_for_blockers(self, db_session, sample_features, temp_project_dir):
+        """Test checking for active blockers requiring intervention."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        # Create a blocker
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing OAUTH_CLIENT_ID",
+            required_values=["OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"],
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Check for blockers
+        found_blocker = handler.check_for_blockers(5)
+
+        assert found_blocker is not None
+        assert found_blocker.feature_id == 5
+        assert found_blocker.status == "ACTIVE"
+
+    def test_write_to_env_new_file(self, db_session, temp_project_dir):
+        """Test writing values to a new .env file."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        values = {
+            "OAUTH_CLIENT_ID": "test_client_id",
+            "OAUTH_CLIENT_SECRET": "test_secret"
+        }
+
+        result = handler._write_to_env(values)
+
+        assert result is True
+
+        # Verify .env file was created
+        env_path = temp_project_dir / ".env"
+        assert env_path.exists()
+
+        # Verify contents
+        content = env_path.read_text()
+        assert "OAUTH_CLIENT_ID=test_client_id" in content
+        assert "OAUTH_CLIENT_SECRET=test_secret" in content
+
+    def test_write_to_env_existing_file(self, db_session, temp_project_dir):
+        """Test writing values to an existing .env file."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        # Create existing .env file
+        env_path = temp_project_dir / ".env"
+        env_path.write_text("EXISTING_VAR=existing_value\n")
+
+        values = {
+            "NEW_VAR": "new_value",
+            "EXISTING_VAR": "should_skip"  # Should not overwrite
+        }
+
+        result = handler._write_to_env(values)
+
+        assert result is True
+
+        # Verify contents
+        content = env_path.read_text()
+        assert "EXISTING_VAR=existing_value" in content
+        assert "NEW_VAR=new_value" in content
+        # Should only appear once (the original)
+        assert content.count("EXISTING_VAR") == 1
+
+    def test_setup_mock_implementation(self, db_session, sample_features, temp_project_dir):
+        """Test setting up mock implementation for blocked feature."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        feature = db_session.query(Feature).filter_by(id=5).first()
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="EXTERNAL_SERVICE",
+            blocker_description="Stripe API not configured",
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Setup mock
+        result = handler._setup_mock_implementation(feature, blocker)
+
+        assert result is True
+        assert feature.passing_with_mocks is True
+
+        # Verify assumption was created
+        assumption = db_session.query(FeatureAssumption).filter_by(
+            feature_id=5
+        ).first()
+
+        assert assumption is not None
+        assert "mock" in assumption.assumption_text.lower()
+        assert assumption.status == "ACTIVE"
+
+    def test_add_to_blockers_md(self, db_session, sample_features, temp_project_dir):
+        """Test adding blocker to BLOCKERS.md."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        feature = db_session.query(Feature).filter_by(id=5).first()
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing OAuth credentials",
+            required_values=["OAUTH_CLIENT_ID"],
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Add to BLOCKERS.md
+        result = handler._add_to_blockers_md(feature, blocker)
+
+        assert result is True
+
+        # Verify BLOCKERS.md was created
+        blockers_path = temp_project_dir / "BLOCKERS.md"
+        assert blockers_path.exists()
+
+        # Verify contents
+        content = blockers_path.read_text()
+        assert "OAuth" in content or "OAUTH" in content
+
+    def test_handle_skip_with_intervention_no_intervention_needed(self, db_session, sample_features, temp_project_dir):
+        """Test handling skip when no human intervention is needed."""
+        handler = HumanInterventionHandler(db_session, temp_project_dir)
+
+        # LEGITIMATE_DEFERRAL doesn't require intervention
+        should_pause, action = handler.handle_skip_with_intervention(
+            5, "This feature is not needed for MVP"
+        )
+
+        assert should_pause is False
+        assert action == "SKIP"
+
+        # Verify blocker was created
+        blocker = db_session.query(FeatureBlocker).filter_by(feature_id=5).first()
+        assert blocker is not None
+
+
+class TestBlockersMdGeneration:
+    """Test BLOCKERS.md generation (Task 1.6)."""
+
+    def test_generate_with_blockers(self, db_session, sample_features):
+        """Test generating BLOCKERS.md with active blockers."""
+        generator = BlockersMdGenerator(db_session)
+
+        # Create some blockers
+        blocker1 = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing OAuth credentials",
+            required_values=["OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"],
+            status="ACTIVE"
+        )
+        blocker2 = FeatureBlocker(
+            feature_id=12,
+            blocker_type="EXTERNAL_SERVICE",
+            blocker_description="Stripe API not configured",
+            status="ACTIVE"
+        )
+        db_session.add(blocker1)
+        db_session.add(blocker2)
+        db_session.commit()
+
+        # Generate content
+        content = generator.generate([blocker1, blocker2])
+
+        assert "Blockers Requiring Human Input" in content
+        assert "Total blockers: 2" in content
+        assert "OAuth" in content or "OAUTH" in content
+        assert "Stripe" in content
+        assert "Feature #5" in content
+        assert "Feature #12" in content
+
+    def test_generate_empty_file(self, db_session):
+        """Test generating BLOCKERS.md with no blockers."""
+        generator = BlockersMdGenerator(db_session)
+
+        content = generator.generate([])
+
+        assert "Blockers Requiring Human Input" in content
+        assert "No active blockers" in content
+
+    def test_group_by_type(self, db_session, sample_features):
+        """Test grouping blockers by type."""
+        generator = BlockersMdGenerator(db_session)
+
+        blockers = [
+            FeatureBlocker(
+                feature_id=5,
+                blocker_type="ENV_CONFIG",
+                blocker_description="Missing env vars",
+                status="ACTIVE"
+            ),
+            FeatureBlocker(
+                feature_id=12,
+                blocker_type="ENV_CONFIG",
+                blocker_description="Missing API keys",
+                status="ACTIVE"
+            ),
+            FeatureBlocker(
+                feature_id=23,
+                blocker_type="EXTERNAL_SERVICE",
+                blocker_description="Service not configured",
+                status="ACTIVE"
+            ),
+        ]
+
+        grouped = generator._group_by_type(blockers)
+
+        assert "ENV_CONFIG" in grouped
+        assert "EXTERNAL_SERVICE" in grouped
+        assert len(grouped["ENV_CONFIG"]) == 2
+        assert len(grouped["EXTERNAL_SERVICE"]) == 1
+
+    def test_update_file(self, db_session, sample_features, temp_project_dir):
+        """Test updating BLOCKERS.md file."""
+        generator = BlockersMdGenerator(db_session)
+
+        # Create a blocker
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing credentials",
+            required_values=["API_KEY"],
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Update file
+        result = generator.update(temp_project_dir)
+
+        assert result is True
+
+        # Verify file exists and has content
+        blockers_file = temp_project_dir / "BLOCKERS.md"
+        assert blockers_file.exists()
+
+        content = blockers_file.read_text()
+        assert "Feature #5" in content
+        assert "API_KEY" in content
+
+    def test_get_summary(self, db_session, sample_features):
+        """Test getting blocker summary statistics."""
+        generator = BlockersMdGenerator(db_session)
+
+        # Create blockers
+        blocker1 = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Test 1",
+            status="ACTIVE"
+        )
+        blocker2 = FeatureBlocker(
+            feature_id=5,
+            blocker_type="EXTERNAL_SERVICE",
+            blocker_description="Test 2",
+            status="ACTIVE"
+        )
+        blocker3 = FeatureBlocker(
+            feature_id=12,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Test 3",
+            status="ACTIVE"
+        )
+        db_session.add_all([blocker1, blocker2, blocker3])
+        db_session.commit()
+
+        summary = generator.get_summary()
+
+        assert summary["total"] == 3
+        assert summary["features_blocked"] == 2  # Features 5 and 12
+        assert "ENV_CONFIG" in summary["by_type"]
+        assert "EXTERNAL_SERVICE" in summary["by_type"]
+        assert summary["by_type"]["ENV_CONFIG"] == 2
+        assert summary["by_type"]["EXTERNAL_SERVICE"] == 1
+
+
+class TestUnblockCommands:
+    """Test unblock CLI commands (Task 1.7)."""
+
+    def test_cmd_unblock(self, db_session, sample_features, temp_project_dir):
+        """Test unblocking a specific feature."""
+        from blockers_cli import cmd_unblock
+
+        # Create a blocked feature with blocker
+        feature = db_session.query(Feature).filter_by(id=5).first()
+        feature.is_blocked = True
+        feature.blocker_type = "ENV_CONFIG"
+        feature.blocker_description = "Missing credentials"
+
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing credentials",
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Unblock the feature
+        result = cmd_unblock(temp_project_dir, 5)
+
+        assert result is True
+
+        # Verify feature is unblocked
+        updated_feature = db_session.query(Feature).filter_by(id=5).first()
+        assert updated_feature.is_blocked is False
+        assert updated_feature.blocker_type is None
+
+        # Verify blocker is resolved
+        updated_blocker = db_session.query(FeatureBlocker).filter_by(id=blocker.id).first()
+        assert updated_blocker.status == "RESOLVED"
+        assert updated_blocker.resolution_action == "MANUAL_UNBLOCK"
+        assert updated_blocker.resolved_at is not None
+
+    def test_cmd_unblock_nonexistent_feature(self, db_session, temp_project_dir):
+        """Test unblocking a feature that doesn't exist."""
+        from blockers_cli import cmd_unblock
+
+        result = cmd_unblock(temp_project_dir, 9999)
+
+        assert result is False
+
+    def test_cmd_unblock_all(self, db_session, sample_features, temp_project_dir):
+        """Test unblocking all blocked features."""
+        from blockers_cli import cmd_unblock_all
+
+        # Block multiple features
+        features = db_session.query(Feature).filter(Feature.id.in_([5, 12])).all()
+        for feature in features:
+            feature.is_blocked = True
+            blocker = FeatureBlocker(
+                feature_id=feature.id,
+                blocker_type="ENV_CONFIG",
+                blocker_description="Test blocker",
+                status="ACTIVE"
+            )
+            db_session.add(blocker)
+
+        db_session.commit()
+
+        # Unblock all
+        result = cmd_unblock_all(temp_project_dir)
+
+        assert result is True
+
+        # Verify all features are unblocked
+        blocked_count = db_session.query(Feature).filter_by(is_blocked=True).count()
+        assert blocked_count == 0
+
+        # Verify all blockers are resolved
+        active_blockers = db_session.query(FeatureBlocker).filter_by(status="ACTIVE").count()
+        assert active_blockers == 0
+
+    def test_cmd_unblock_all_no_blockers(self, db_session, temp_project_dir):
+        """Test unblock-all when there are no blocked features."""
+        from blockers_cli import cmd_unblock_all
+
+        result = cmd_unblock_all(temp_project_dir)
+
+        assert result is True
+
+    def test_cmd_show_blockers(self, db_session, sample_features, temp_project_dir):
+        """Test showing active blockers."""
+        from blockers_cli import cmd_show_blockers
+
+        # Create some blockers
+        blocker = FeatureBlocker(
+            feature_id=5,
+            blocker_type="ENV_CONFIG",
+            blocker_description="Missing credentials",
+            required_values=["API_KEY"],
+            status="ACTIVE"
+        )
+        db_session.add(blocker)
+        db_session.commit()
+
+        # Show blockers
+        result = cmd_show_blockers(temp_project_dir, verbose=False)
+
+        assert result is True
+
+    def test_cmd_show_dependencies(self, db_session, sample_features, temp_project_dir):
+        """Test showing dependencies for a feature."""
+        from blockers_cli import cmd_show_dependencies
+        from dependency_detector import DependencyDetector
+
+        # First detect dependencies
+        detector = DependencyDetector(db_session)
+        detector.detect_all_dependencies()
+
+        # Show dependencies for Feature #12 (which depends on #5)
+        result = cmd_show_dependencies(temp_project_dir, 12)
+
+        assert result is True
+
+
 class TestEndToEndWorkflow:
     """Test complete end-to-end workflows."""
 

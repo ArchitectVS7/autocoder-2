@@ -46,7 +46,7 @@ class Feature(Base):
     # Relationships
     dependencies = relationship("FeatureDependency", foreign_keys="FeatureDependency.feature_id", back_populates="feature")
     dependent_features = relationship("FeatureDependency", foreign_keys="FeatureDependency.depends_on_feature_id", back_populates="depends_on")
-    assumptions = relationship("FeatureAssumption", back_populates="feature")
+    assumptions = relationship("FeatureAssumption", foreign_keys="FeatureAssumption.feature_id", back_populates="feature")
     blockers = relationship("FeatureBlocker", back_populates="feature")
 
     def to_dict(self) -> dict:
@@ -119,7 +119,7 @@ class FeatureAssumption(Base):
     validated_at = Column(DateTime, nullable=True)
 
     # Relationships
-    feature = relationship("Feature", back_populates="assumptions")
+    feature = relationship("Feature", foreign_keys=[feature_id], back_populates="assumptions")
 
     def to_dict(self) -> dict:
         """Convert assumption to dictionary for JSON serialization."""
@@ -168,7 +168,6 @@ class FeatureBlocker(Base):
             "resolution_action": self.resolution_action,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
->>>>>>> Stashed changes
         }
 
     def get_dependencies_safe(self) -> list[int]:
