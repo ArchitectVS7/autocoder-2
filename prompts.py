@@ -438,7 +438,7 @@ def get_coding_prompt_with_persona(feature: dict, project_dir: Path | None = Non
         >>> prompt = get_coding_prompt_with_persona(feature)
         # Returns base prompt + SECURITY_PERSONA + CRAFTSMANSHIP_MINDSET
     """
-    from persona_prompts import (
+    from design.persona_prompts import (
         SECURITY_PERSONA,
         UX_PERSONA,
         API_PERSONA,

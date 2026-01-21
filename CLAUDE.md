@@ -88,9 +88,11 @@ npm run lint     # Run ESLint
 
 ## Architecture
 
-### Core Python Modules
+### Core Python Modules (Root Directory)
 
+Entry points and core modules:
 - `start.py` - CLI launcher with project creation/selection menu
+- `start_ui.py` - Web UI launcher for serving the React interface
 - `autonomous_agent_demo.py` - Entry point for running the agent
 - `agent.py` - Agent session loop using Claude Agent SDK
 - `client.py` - ClaudeSDKClient configuration with security hooks and MCP servers
@@ -98,7 +100,52 @@ npm run lint     # Run ESLint
 - `prompts.py` - Prompt template loading with project-specific fallback
 - `progress.py` - Progress tracking, database queries, webhook notifications
 - `registry.py` - Project registry for mapping names to paths (cross-platform)
+- `auth.py` - Authentication helpers
 - `parallel_orchestrator.py` - Concurrent agent execution with dependency-aware scheduling
+
+### Checkpoint System (checkpoint/)
+
+Quality gates and automated code review:
+- `checkpoint/config.py` - Checkpoint configuration and settings
+- `checkpoint/orchestrator.py` - Checkpoint orchestration engine
+- `checkpoint/agent_code_review.py` - Code quality analysis agent
+- `checkpoint/agent_security.py` - Security audit agent (OWASP Top 10)
+- `checkpoint/agent_performance.py` - Performance analysis agent
+- `checkpoint/autofix.py` - Automatic fix feature creation for critical issues
+- `checkpoint/report_writer.py` - Checkpoint report generation
+
+### Design System (design/)
+
+Persona-based design iteration and UX evaluation:
+- `design/persona_system.py` - Persona definition and loading system
+- `design/persona_prompts.py` - Persona prompt templates and rubrics
+- `design/iteration.py` - Design iteration workflow with multi-persona review
+- `design/review.py` - Design review CLI tool
+- `design/human_intervention.py` - Human intervention prompts and handlers
+
+### Metrics & Performance (metrics/)
+
+Performance tracking and benchmarking:
+- `metrics/collector.py` - Metrics collection system for agent performance
+- `metrics/dashboard.py` - Real-time performance dashboard (CLI)
+- `metrics/report_generator.py` - Performance report generation with ROI analysis
+
+### Utilities & Tools (tools/)
+
+Standalone utilities and CLI tools:
+- `tools/blockers_cli.py` - CLI for blocker management
+- `tools/blockers_md_generator.py` - BLOCKERS.md generation
+- `tools/assumptions_cli.py` - CLI for assumptions management
+- `tools/assumptions_workflow.py` - Assumption workflow automation
+- `tools/skip_analyzer.py` - Skip impact analysis
+- `tools/dependency_detector.py` - Dependency detection engine
+- `tools/blocker_classifier.py` - Blocker classification system
+- `tools/benchmark_compare.py` - Benchmark comparison utilities
+
+### API & Database (api/)
+
+Database models and API utilities:
+- `api/database.py` - SQLAlchemy models (Feature, FeatureDependency, etc.)
 - `api/dependency_resolver.py` - Cycle detection (Kahn's algorithm + DFS) and dependency validation
 
 ### Project Registry
@@ -160,6 +207,29 @@ Keyboard shortcuts (press `?` for help):
 - `N` - Add new feature
 - `A` - Toggle AI assistant
 - `,` - Open settings
+
+### Tests (tests/)
+
+Comprehensive test suite organized by phase:
+- `tests/unit/` - Unit tests for core modules (test_*.py files)
+- `tests/test_phase0_persona_switching.py` - Phase 0: Persona switching tests
+- `tests/test_phase1_integration.py` - Phase 1: Skip management & dependency tracking
+- `tests/test_phase2_integration.py` - Phase 2: Metrics & performance tracking
+- `tests/test_phase3_checkpoints.py` - Phase 3: Checkpoint system tests
+- `tests/test_phase4_personas.py` - Phase 4: Persona definition system tests
+- `tests/test_phase4_design_iteration.py` - Phase 4: Design iteration workflow tests
+
+### Documentation (docs/)
+
+Project documentation organized by category:
+- `docs/DEVELOPER_GUIDE.md` - Developer guide for contributing
+- `docs/TROUBLESHOOTING.md` - Common issues and solutions
+- `docs/SKIP_MANAGEMENT_USER_GUIDE.md` - Skip management feature guide
+- `docs/PRD_TO_IMPLEMENTATION_MAPPING.md` - PRD to implementation mapping
+- `docs/requirements/` - Product requirements and specifications (PRD_ENHANCEMENT*.md)
+- `docs/examples/` - Example specifications (SAMPLE_PROMPT.md)
+- `docs/project-tracking/` - Active project tracking (FEATURE_TESTING_MATRIX.md, PHASE_COMPLETION_STATUS.md)
+- `docs/archive/` - Historical documents (reviews, old implementation plans)
 
 ### Project Structure for Generated Apps
 

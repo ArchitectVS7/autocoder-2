@@ -29,12 +29,12 @@ from api.database import (
     create_database, Feature, FeatureDependency,
     FeatureAssumption, FeatureBlocker
 )
-from dependency_detector import DependencyDetector
-from skip_analyzer import SkipImpactAnalyzer
-from blocker_classifier import BlockerClassifier, BlockerType
-from human_intervention import HumanInterventionHandler
-from blockers_md_generator import BlockersMdGenerator
-from assumptions_workflow import AssumptionsWorkflow, should_document_assumptions
+from tools.dependency_detector import DependencyDetector
+from tools.skip_analyzer import SkipImpactAnalyzer
+from tools.blocker_classifier import BlockerClassifier, BlockerType
+from design.human_intervention import HumanInterventionHandler
+from tools.blockers_md_generator import BlockersMdGenerator
+from tools.assumptions_workflow import AssumptionsWorkflow, should_document_assumptions
 
 
 @pytest.fixture

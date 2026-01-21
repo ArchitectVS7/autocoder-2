@@ -21,10 +21,10 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from metrics_collector import MetricsCollector, estimate_api_cost
-from performance_dashboard import PerformanceDashboard
-from report_generator import PerformanceReportGenerator
-from benchmark_compare import BenchmarkComparator
+from metrics.collector import MetricsCollector, estimate_api_cost
+from metrics.dashboard import PerformanceDashboard
+from metrics.report_generator import PerformanceReportGenerator
+from tools.benchmark_compare import BenchmarkComparator
 
 
 @pytest.fixture

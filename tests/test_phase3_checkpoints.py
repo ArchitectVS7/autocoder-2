@@ -13,7 +13,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from checkpoint_config import (
+from checkpoint.config import (
     AutocoderConfig,
     CheckpointConfig,
     CheckpointTypes,
@@ -22,7 +22,7 @@ from checkpoint_config import (
     set_config,
     reset_config
 )
-from checkpoint_orchestrator import (
+from checkpoint.orchestrator import (
     CheckpointOrchestrator,
     CheckpointDecision,
     CheckpointResult,
@@ -31,7 +31,7 @@ from checkpoint_orchestrator import (
     AggregatedCheckpointResult,
     run_checkpoint_if_needed
 )
-from checkpoint_report_writer import CheckpointReportWriter
+from checkpoint.report_writer import CheckpointReportWriter
 from datetime import datetime as dt
 
 

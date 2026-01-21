@@ -12,7 +12,7 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
-from persona_system import (
+from design.persona_system import (
     Persona,
     EvaluationCriterion,
     SampleFeedback,

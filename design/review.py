@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from design_iteration import (
+from design.iteration import (
     DesignIterationAgent,
     PersonaReviewPanel,
     DesignSynthesisAgent,
@@ -26,7 +26,7 @@ from design_iteration import (
     DesignDocument,
     DesignIterationResult
 )
-from persona_system import PersonaLoader
+from design.persona_system import PersonaLoader
 
 
 class DesignReviewCLI:

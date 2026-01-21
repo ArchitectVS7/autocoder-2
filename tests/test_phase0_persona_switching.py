@@ -14,7 +14,7 @@ Test Coverage:
 import pytest
 from pathlib import Path
 from prompts import detect_feature_type, get_coding_prompt_with_persona
-from persona_prompts import (
+from design.persona_prompts import (
     SECURITY_PERSONA,
     UX_PERSONA,
     API_PERSONA,

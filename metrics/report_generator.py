@@ -19,7 +19,7 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
-from metrics_collector import MetricsCollector, MetricsRun, MetricsSession, MetricsFeature, MetricsIntervention
+from metrics.collector import MetricsCollector, MetricsRun, MetricsSession, MetricsFeature, MetricsIntervention
 
 
 class PerformanceReportGenerator:
