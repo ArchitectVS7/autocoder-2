@@ -12,8 +12,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from api.database import create_database, Feature, FeatureBlocker
-from blockers_md_generator import BlockersMdGenerator, print_blockers_summary
-from blocker_classifier import BlockerClassifier
+from tools.blockers_md_generator import BlockersMdGenerator, print_blockers_summary
+from tools.blocker_classifier import BlockerClassifier
 
 
 def cmd_unblock(project_dir: Path, feature_id: int) -> bool:

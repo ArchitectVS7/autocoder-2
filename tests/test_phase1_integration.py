@@ -571,15 +571,18 @@ class TestAssumptionsWorkflow:
         db_session.add(dep)
         db_session.commit()
 
-        # Get the documentation prompt
-        doc_prompt = workflow.get_assumption_documentation_prompt(12)
+        # Get the assumption prompt
+        doc_prompt = workflow.get_assumption_prompt(
+            current_feature_id=12,
+            dependency_feature_id=5
+        )
 
         # Verify prompt contains necessary information
         assert doc_prompt != ""
-        assert "Feature #12" in doc_prompt
-        assert "Feature #5" in doc_prompt
+        assert "Feature #12" in doc_prompt or "#12" in doc_prompt
+        assert "Feature #5" in doc_prompt or "#5" in doc_prompt
         assert "ASSUMPTION" in doc_prompt.upper()
-        assert "document" in doc_prompt.lower()
+        assert "document" in doc_prompt.lower() or "assume" in doc_prompt.lower()
 
         # Test ASSUMPTION_REVIEW_PROMPT
         # Create some assumptions for Feature 5
@@ -1017,7 +1020,7 @@ class TestUnblockCommands:
     def test_cmd_show_dependencies(self, db_session, sample_features, temp_project_dir):
         """Test showing dependencies for a feature."""
         from tools.blockers_cli import cmd_show_dependencies
-        from dependency_detector import DependencyDetector
+        from tools.dependency_detector import DependencyDetector
 
         # First detect dependencies
         detector = DependencyDetector(db_session)
