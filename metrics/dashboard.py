@@ -26,7 +26,7 @@ from rich.layout import Layout
 from rich.text import Text
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
-from metrics_collector import MetricsCollector
+from metrics.collector import MetricsCollector
 
 
 class PerformanceDashboard:
@@ -329,7 +329,7 @@ def create_progress_bar() -> Progress:
 
 if __name__ == "__main__":
     # Example usage
-    from metrics_collector import MetricsCollector
+    from metrics.collector import MetricsCollector
     from pathlib import Path
     import random
 

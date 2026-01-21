@@ -17,7 +17,7 @@ from enum import Enum
 import json
 from datetime import datetime
 
-from persona_system import Persona, PersonaLoader
+from design.persona_system import Persona, PersonaLoader
 
 
 class FeedbackSentiment(Enum):

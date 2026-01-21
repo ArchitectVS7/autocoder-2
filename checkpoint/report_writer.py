@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from checkpoint_orchestrator import AggregatedCheckpointResult, CheckpointDecision, IssueSeverity
+from checkpoint.orchestrator import AggregatedCheckpointResult, CheckpointDecision, IssueSeverity
 
 
 class CheckpointReportWriter:

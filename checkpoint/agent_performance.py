@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple
 
-from checkpoint_orchestrator import CheckpointResult, CheckpointIssue, IssueSeverity
+from checkpoint.orchestrator import CheckpointResult, CheckpointIssue, IssueSeverity
 
 
 class PerformanceAgent:

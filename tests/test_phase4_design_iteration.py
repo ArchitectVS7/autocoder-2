@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from design_iteration import (
+from design.iteration import (
     DesignDocument,
     DesignIterationAgent,
     PersonaReviewPanel,
@@ -28,7 +28,7 @@ from design_iteration import (
     UserFlow,
     ComponentHierarchy
 )
-from persona_system import Persona, PersonaLoader, EvaluationCriterion
+from design.persona_system import Persona, PersonaLoader, EvaluationCriterion
 
 
 # ============================================================================

@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from checkpoint_config import get_config, AutocoderConfig
+from checkpoint.config import get_config, AutocoderConfig
 
 
 class CheckpointDecision(Enum):

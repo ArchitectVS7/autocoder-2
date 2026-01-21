@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from checkpoint_orchestrator import AggregatedCheckpointResult, CheckpointIssue, IssueSeverity
+from checkpoint.orchestrator import AggregatedCheckpointResult, CheckpointIssue, IssueSeverity
 from api.database import Feature
 
 
