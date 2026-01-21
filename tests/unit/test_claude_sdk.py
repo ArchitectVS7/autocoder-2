@@ -8,14 +8,20 @@ import os
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
 
-# Activate venv first
-venv_python = Path("venv/Scripts/python.exe")
+# Activate venv first (cross-platform)
+if sys.platform == "win32":
+    venv_python = Path("venv/Scripts/python.exe")
+    venv_site_packages = Path("venv/Lib/site-packages")
+else:
+    venv_python = Path("venv/bin/python")
+    venv_site_packages = Path("venv/lib") / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+
 if not venv_python.exists():
     print("[ERROR] Virtual environment not found!")
     sys.exit(1)
 
 # Import from venv
-sys.path.insert(0, str(Path("venv/Lib/site-packages")))
+sys.path.insert(0, str(venv_site_packages))
 
 try:
     from claude_agent_sdk import ClaudeAgentOptions, ClaudeSDKClient

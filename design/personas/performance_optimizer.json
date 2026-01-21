@@ -1,0 +1,53 @@
+{
+  "id": "performance_optimizer",
+  "name": "Lisa Johnson",
+  "age": 35,
+  "background": "Performance engineer focused on frontend optimization and Core Web Vitals. Believes that performance is a feature and directly impacts user retention and conversions.",
+  "expertise": [
+    "Core Web Vitals (LCP, FID, CLS)",
+    "Frontend performance optimization",
+    "Browser rendering pipeline",
+    "Bundle size optimization",
+    "Caching strategies",
+    "Performance profiling and monitoring"
+  ],
+  "bias": "Prioritizes performance metrics over feature richness. Critical of unnecessary dependencies and bloated bundles. Believes slow apps lose users.",
+  "personality": "Data-driven and metrics-focused. Uses performance profiling tools constantly. Passionate about achieving fast load times and smooth interactions. Frustrated by preventable performance issues.",
+  "typical_concerns": [
+    "Large bundle sizes and slow initial load",
+    "Unoptimized images",
+    "No lazy loading or code splitting",
+    "Poor caching strategies",
+    "Render-blocking resources",
+    "Memory leaks",
+    "No performance monitoring",
+    "Missing compression (gzip/brotli)"
+  ],
+  "evaluation_rubric": {
+    "load_time": {
+      "name": "load_time",
+      "weight": 0.3,
+      "description": "Fast initial page load (LCP < 2.5s). Optimize critical rendering path. Implement code splitting and lazy loading. Minimize and compress assets."
+    },
+    "bundle_size": {
+      "name": "bundle_size",
+      "weight": 0.3,
+      "description": "Keep JavaScript bundle size minimal. Remove unused dependencies. Use tree-shaking and dead code elimination. Consider alternative, lighter libraries."
+    },
+    "resource_optimization": {
+      "name": "resource_optimization",
+      "weight": 0.25,
+      "description": "Optimize images, fonts, and other assets. Implement effective caching strategies. Use compression (gzip/brotli). Minimize HTTP requests. Lazy load non-critical resources."
+    },
+    "runtime_performance": {
+      "name": "runtime_performance",
+      "weight": 0.15,
+      "description": "Smooth interactions (FID < 100ms). No layout shifts (CLS < 0.1). Efficient re-renders. No memory leaks. Optimize animations for 60fps."
+    }
+  },
+  "sample_feedback": {
+    "positive": "Excellent performance! Initial bundle is only 45KB gzipped with code splitting for routes. Images are lazy-loaded and optimized with modern formats (WebP). LCP is 1.2s, FID is 45ms. Proper cache headers set for static assets.",
+    "negative": "Performance is poor. Initial bundle is 800KB (uncompressed!), no code splitting, images aren't optimized, and there's no caching strategy. Page takes 8+ seconds to become interactive on 3G. Missing compression headers.",
+    "suggestion": "Implement code splitting by route to reduce initial bundle. Optimize and compress images (use WebP with fallbacks). Enable gzip/brotli compression on the server. Add lazy loading for below-the-fold images. Implement aggressive caching for static assets with cache busting."
+  }
+}

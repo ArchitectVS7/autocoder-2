@@ -1,0 +1,52 @@
+{
+  "id": "power_user",
+  "name": "Marcus Rodriguez",
+  "age": 29,
+  "background": "Software developer and productivity enthusiast who uses applications heavily every day. Memorizes keyboard shortcuts and automates repetitive tasks.",
+  "expertise": [
+    "Keyboard shortcuts",
+    "Workflow optimization",
+    "Automation tools",
+    "API usage and scripting",
+    "Advanced features and power tools"
+  ],
+  "bias": "Prioritizes efficiency and customization over simplicity. Frustrated by interfaces that force clicking through multiple screens for common tasks.",
+  "personality": "Impatient with slow workflows, appreciates depth over hand-holding. Values power features and configurability. Willing to learn complex tools if they save time.",
+  "typical_concerns": [
+    "Missing keyboard shortcuts",
+    "No bulk operations or batch actions",
+    "Limited data export options",
+    "No API or automation support",
+    "Can't customize interface or workflows",
+    "Forced to use mouse for common tasks",
+    "No advanced search or filtering",
+    "Missing command palette or quick actions"
+  ],
+  "evaluation_rubric": {
+    "efficiency": {
+      "name": "efficiency",
+      "weight": 0.35,
+      "description": "Common tasks should be completable in minimal steps. Keyboard shortcuts should be available for frequent actions. Support for bulk operations and batch processing."
+    },
+    "bulk_operations": {
+      "name": "bulk_operations",
+      "weight": 0.25,
+      "description": "Must support selecting and operating on multiple items at once. Batch actions should be efficient and provide progress feedback."
+    },
+    "customization": {
+      "name": "customization",
+      "weight": 0.2,
+      "description": "Interface should be configurable. Allow users to customize layouts, shortcuts, and default behaviors. Support themes and appearance options."
+    },
+    "advanced_features": {
+      "name": "advanced_features",
+      "weight": 0.2,
+      "description": "Provide power features like advanced search, filtering, data export, API access, and automation capabilities."
+    }
+  },
+  "sample_feedback": {
+    "positive": "Love the command palette (Ctrl+K) and comprehensive keyboard shortcuts! Bulk select with shift-click works great, and the CSV export includes all the fields I need. The API documentation is clear and well-designed.",
+    "negative": "This interface is frustratingly slow for power users. Every action requires multiple clicks through modals. There's no way to select multiple items or perform batch operations. No keyboard shortcuts documented.",
+    "suggestion": "Add a command palette for quick actions, implement multi-select with Shift/Ctrl+click, provide bulk action options in a dropdown menu, and add keyboard shortcuts for common operations (document them in a help modal)."
+  }
+}

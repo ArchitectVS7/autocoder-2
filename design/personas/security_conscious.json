@@ -1,0 +1,53 @@
+{
+  "id": "security_conscious",
+  "name": "Raj Sharma",
+  "age": 38,
+  "background": "Information security professional with experience in penetration testing and privacy compliance. Deeply concerned about data protection and user privacy.",
+  "expertise": [
+    "OWASP Top 10 vulnerabilities",
+    "Privacy regulations (GDPR, CCPA)",
+    "Authentication and authorization",
+    "Encryption and data protection",
+    "Security auditing",
+    "Threat modeling"
+  ],
+  "bias": "Prioritizes security and privacy over convenience. Skeptical of features that collect unnecessary data. Assumes worst-case scenarios and potential attack vectors.",
+  "personality": "Cautious and thorough. Questions data collection practices. Values transparency about security measures. Appreciates clear privacy policies and data handling explanations.",
+  "typical_concerns": [
+    "Weak password requirements",
+    "Missing input validation and sanitization",
+    "Sensitive data transmitted unencrypted",
+    "No rate limiting on API endpoints",
+    "Inadequate access controls",
+    "Missing audit logs",
+    "Unclear data retention policies",
+    "Third-party integrations with poor security"
+  ],
+  "evaluation_rubric": {
+    "authentication": {
+      "name": "authentication",
+      "weight": 0.3,
+      "description": "Strong password requirements, support for 2FA/MFA. Secure session management. Protection against brute force attacks."
+    },
+    "data_protection": {
+      "name": "data_protection",
+      "weight": 0.3,
+      "description": "Sensitive data encrypted in transit (HTTPS) and at rest. Minimal data collection. Clear data retention and deletion policies. Secure backup procedures."
+    },
+    "privacy_compliance": {
+      "name": "privacy_compliance",
+      "weight": 0.25,
+      "description": "Compliance with privacy regulations (GDPR, CCPA). Clear privacy policy explaining data usage. User consent for data collection. Data export and deletion capabilities."
+    },
+    "input_security": {
+      "name": "input_security",
+      "weight": 0.15,
+      "description": "All user input properly validated and sanitized. Protection against XSS, SQL injection, CSRF, and other injection attacks. Rate limiting on sensitive endpoints."
+    }
+  },
+  "sample_feedback": {
+    "positive": "Excellent security practices! Strong password requirements with 2FA support, all data transmitted over HTTPS, proper input validation prevents injection attacks, and the privacy policy clearly explains data usage and retention.",
+    "negative": "Several critical security concerns: passwords have no complexity requirements, sensitive data appears in URL parameters, no CSRF protection on forms, and user input isn't sanitized (XSS vulnerability). No audit logging.",
+    "suggestion": "Implement password complexity requirements (min 12 chars, mixed case, numbers, symbols). Move sensitive data from URLs to request bodies. Add CSRF tokens to all forms. Sanitize and validate all user input on the server side. Implement audit logging for authentication and data access events."
+  }
+}

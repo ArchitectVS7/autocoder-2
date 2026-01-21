@@ -11,7 +11,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from api.database import Feature, FeatureDependency
-from dependency_detector import DependencyDetector
+from tools.dependency_detector import DependencyDetector
 
 
 class SkipImpactAnalyzer:

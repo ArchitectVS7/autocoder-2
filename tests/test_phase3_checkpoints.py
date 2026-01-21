@@ -1172,7 +1172,7 @@ class TestCheckpointReportIntegration:
 # Task 3.4: Code Review Checkpoint Agent
 # =============================================================================
 
-from checkpoint_agent_code_review import CodeReviewAgent
+from checkpoint.agent_code_review import CodeReviewAgent
 import subprocess
 
 
@@ -1553,7 +1553,7 @@ function getUser(id: number): User {
 # Task 3.5: Security Audit Checkpoint Agent
 # =============================================================================
 
-from checkpoint_agent_security import SecurityAuditAgent
+from checkpoint.agent_security import SecurityAuditAgent
 
 
 class TestSecurityAuditAgent:
@@ -2001,7 +2001,7 @@ secret_key: my-secret-key
 # Task 3.6: Performance Checkpoint Agent
 # =============================================================================
 
-from checkpoint_agent_performance import PerformanceAgent
+from checkpoint.agent_performance import PerformanceAgent
 
 
 class TestPerformanceAgent:
@@ -2273,7 +2273,7 @@ import _ from 'lodash';
 # Task 3.7: Auto-Fix Feature Creation
 # =============================================================================
 
-from checkpoint_autofix import CheckpointAutoFix, create_fixes_if_needed
+from checkpoint.autofix import CheckpointAutoFix, create_fixes_if_needed
 from api.database import Feature as DBFeature
 import tempfile
 

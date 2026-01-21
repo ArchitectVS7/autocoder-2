@@ -13,8 +13,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from api.database import Feature, FeatureBlocker
-from blocker_classifier import BlockerClassifier, BlockerType
-from skip_analyzer import SkipImpactAnalyzer
+from tools.blocker_classifier import BlockerClassifier, BlockerType
+from tools.skip_analyzer import SkipImpactAnalyzer
 
 
 class HumanInterventionHandler:
@@ -205,7 +205,7 @@ class HumanInterventionHandler:
         Returns:
             True if successful
         """
-        from blockers_md_generator import BlockersMdGenerator
+        from tools.blockers_md_generator import BlockersMdGenerator
 
         generator = BlockersMdGenerator(self.db)
         generator.update(self.project_dir)
