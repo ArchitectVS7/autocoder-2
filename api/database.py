@@ -9,10 +9,11 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Column, Integer, String, Text, Float, DateTime, ForeignKey, create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker, relationship
 from sqlalchemy.types import JSON
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -34,6 +35,20 @@ class Feature(Base):
     # NULL/empty = no dependencies (backwards compatible)
     dependencies = Column(JSON, nullable=True, default=None)
 
+    # Phase 1: Skip Management fields
+    was_skipped = Column(Boolean, default=False, index=True)
+    skip_count = Column(Integer, default=0)
+    blocker_type = Column(String(50), nullable=True)  # ENV_CONFIG, EXTERNAL_SERVICE, etc.
+    blocker_description = Column(Text, nullable=True)
+    is_blocked = Column(Boolean, default=False, index=True)
+    passing_with_mocks = Column(Boolean, default=False)
+
+    # Relationships
+    dependencies = relationship("FeatureDependency", foreign_keys="FeatureDependency.feature_id", back_populates="feature")
+    dependent_features = relationship("FeatureDependency", foreign_keys="FeatureDependency.depends_on_feature_id", back_populates="depends_on")
+    assumptions = relationship("FeatureAssumption", back_populates="feature")
+    blockers = relationship("FeatureBlocker", back_populates="feature")
+
     def to_dict(self) -> dict:
         """Convert feature to dictionary for JSON serialization."""
         return {
@@ -48,6 +63,112 @@ class Feature(Base):
             "in_progress": self.in_progress if self.in_progress is not None else False,
             # Dependencies: NULL/empty treated as empty list for backwards compat
             "dependencies": self.dependencies if self.dependencies else [],
+            # Phase 1: Skip Management fields
+            "was_skipped": self.was_skipped,
+            "skip_count": self.skip_count,
+            "blocker_type": self.blocker_type,
+            "blocker_description": self.blocker_description,
+            "is_blocked": self.is_blocked,
+            "passing_with_mocks": self.passing_with_mocks,
+        }
+
+
+class FeatureDependency(Base):
+    """Tracks dependencies between features."""
+
+    __tablename__ = "feature_dependencies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    feature_id = Column(Integer, ForeignKey("features.id"), nullable=False, index=True)
+    depends_on_feature_id = Column(Integer, ForeignKey("features.id"), nullable=False, index=True)
+    confidence = Column(Float, default=1.0)  # 0.0-1.0 confidence score
+    detected_method = Column(String(50), nullable=False)  # 'explicit_id', 'keyword', 'category'
+    detected_keywords = Column(JSON, nullable=True)  # Keywords that triggered detection
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    feature = relationship("Feature", foreign_keys=[feature_id], back_populates="dependencies")
+    depends_on = relationship("Feature", foreign_keys=[depends_on_feature_id], back_populates="dependent_features")
+
+    def to_dict(self) -> dict:
+        """Convert dependency to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "feature_id": self.feature_id,
+            "depends_on_feature_id": self.depends_on_feature_id,
+            "confidence": self.confidence,
+            "detected_method": self.detected_method,
+            "detected_keywords": self.detected_keywords,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class FeatureAssumption(Base):
+    """Tracks assumptions made when implementing features with dependencies on skipped features."""
+
+    __tablename__ = "feature_assumptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    feature_id = Column(Integer, ForeignKey("features.id"), nullable=False, index=True)
+    depends_on_feature_id = Column(Integer, ForeignKey("features.id"), nullable=True, index=True)
+    assumption_text = Column(Text, nullable=False)
+    code_location = Column(String(500), nullable=True)  # File path and line numbers
+    impact_description = Column(Text, nullable=True)  # What happens if assumption is wrong
+    status = Column(String(50), default="ACTIVE")  # ACTIVE, VALIDATED, INVALID, NEEDS_REVIEW
+    created_at = Column(DateTime, default=datetime.utcnow)
+    validated_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    feature = relationship("Feature", back_populates="assumptions")
+
+    def to_dict(self) -> dict:
+        """Convert assumption to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "feature_id": self.feature_id,
+            "depends_on_feature_id": self.depends_on_feature_id,
+            "assumption_text": self.assumption_text,
+            "code_location": self.code_location,
+            "impact_description": self.impact_description,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "validated_at": self.validated_at.isoformat() if self.validated_at else None,
+        }
+
+
+class FeatureBlocker(Base):
+    """Tracks blockers that prevent feature implementation."""
+
+    __tablename__ = "feature_blockers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    feature_id = Column(Integer, ForeignKey("features.id"), nullable=False, index=True)
+    blocker_type = Column(String(50), nullable=False)  # ENV_CONFIG, EXTERNAL_SERVICE, etc.
+    blocker_description = Column(Text, nullable=False)
+    required_action = Column(Text, nullable=True)  # What user needs to do
+    required_values = Column(JSON, nullable=True)  # List of env vars or config needed
+    status = Column(String(50), default="ACTIVE", index=True)  # ACTIVE, RESOLVED, DEFERRED
+    resolution_action = Column(String(50), nullable=True)  # PROVIDED, DEFERRED, MOCKED
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    feature = relationship("Feature", back_populates="blockers")
+
+    def to_dict(self) -> dict:
+        """Convert blocker to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "feature_id": self.feature_id,
+            "blocker_type": self.blocker_type,
+            "blocker_description": self.blocker_description,
+            "required_action": self.required_action,
+            "required_values": self.required_values,
+            "status": self.status,
+            "resolution_action": self.resolution_action,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+>>>>>>> Stashed changes
         }
 
     def get_dependencies_safe(self) -> list[int]:
@@ -164,6 +285,32 @@ def _is_network_path(path: Path) -> bool:
     return False
 
 
+def _migrate_add_phase1_columns(engine) -> None:
+    """Add Phase 1 skip management columns to existing databases."""
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        # Check which columns exist
+        result = conn.execute(text("PRAGMA table_info(features)"))
+        columns = [row[1] for row in result.fetchall()]
+
+        # Add new columns if they don't exist
+        new_columns = [
+            ("was_skipped", "BOOLEAN DEFAULT 0"),
+            ("skip_count", "INTEGER DEFAULT 0"),
+            ("blocker_type", "VARCHAR(50)"),
+            ("blocker_description", "TEXT"),
+            ("is_blocked", "BOOLEAN DEFAULT 0"),
+            ("passing_with_mocks", "BOOLEAN DEFAULT 0"),
+        ]
+
+        for column_name, column_type in new_columns:
+            if column_name not in columns:
+                conn.execute(text(f"ALTER TABLE features ADD COLUMN {column_name} {column_type}"))
+
+        conn.commit()
+
+
 def create_database(project_dir: Path) -> tuple:
     """
     Create database and return engine + session maker.
@@ -195,6 +342,9 @@ def create_database(project_dir: Path) -> tuple:
     _migrate_add_in_progress_column(engine)
     _migrate_fix_null_boolean_fields(engine)
     _migrate_add_dependencies_column(engine)
+
+    # Migrate existing databases to add Phase 1 columns
+    _migrate_add_phase1_columns(engine)
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return engine, SessionLocal
