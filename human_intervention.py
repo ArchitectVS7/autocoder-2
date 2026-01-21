@@ -286,7 +286,7 @@ class HumanInterventionHandler:
         blocker_type = self.classifier.classify_blocker(feature, skip_reason)
 
         # Create blocker record
-        required_values = self.classifier.extract_required_values(blocker_type, skip_reason)
+        required_values = self.classifier.extract_required_values(skip_reason, blocker_type)
         blocker = self.classifier.create_blocker(
             feature_id=feature_id,
             blocker_type=blocker_type,

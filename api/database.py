@@ -179,6 +179,40 @@ class FeatureBlocker(Base):
         return []
 
 
+class Checkpoint(Base):
+    """Stores checkpoint execution results for historical tracking and analysis."""
+
+    __tablename__ = "checkpoints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    checkpoint_number = Column(Integer, nullable=False, index=True)
+    features_completed = Column(Integer, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    decision = Column(String(50), nullable=False)  # PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS
+    total_critical = Column(Integer, default=0)
+    total_warnings = Column(Integer, default=0)
+    total_info = Column(Integer, default=0)
+    execution_time_ms = Column(Float, default=0.0)
+    report_filepath = Column(String(500), nullable=True)  # Path to markdown report
+    result_json = Column(JSON, nullable=True)  # Full result object as JSON
+
+    def to_dict(self) -> dict:
+        """Convert checkpoint to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "checkpoint_number": self.checkpoint_number,
+            "features_completed": self.features_completed,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "decision": self.decision,
+            "total_critical": self.total_critical,
+            "total_warnings": self.total_warnings,
+            "total_info": self.total_info,
+            "execution_time_ms": self.execution_time_ms,
+            "report_filepath": self.report_filepath,
+            "result_json": self.result_json,
+        }
+
+
 def get_database_path(project_dir: Path) -> Path:
     """Return the path to the SQLite database for a project."""
     return project_dir / "features.db"

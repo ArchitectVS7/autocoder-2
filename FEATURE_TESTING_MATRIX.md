@@ -169,10 +169,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 |------------|-------------------|---------------|----------------|---------------|-------|
 | **1.3.1** | analyze_skip_impact() with cascade depth | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_analyze_skip_with_dependents` | Test passed ✅ |
 | **1.3.2** | get_dependent_features() recursive tree | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
-| **1.3.3** | Recommendation system (SAFE_TO_SKIP, CASCADE_SKIP, IMPLEMENT_WITH_MOCKS, REVIEW_DEPENDENCIES) | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_skip_recommendations` | Return value structure mismatch |
+| **1.3.3** | Recommendation system (SAFE_TO_SKIP, CASCADE_SKIP, IMPLEMENT_WITH_MOCKS, REVIEW_DEPENDENCIES) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestSkipImpactAnalysis::test_skip_recommendations` | **FIXED:** Test now checks 'recommendation' field (full strings) vs 'suggested_action' (short codes) |
 | **1.3.4** | Impact report formatting with tree visualization | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
 
-**Task 1.3 Summary:** 4/4 features complete, 1/2 tests passed (1 failed), 2/4 need tests
+**Task 1.3 Summary:** 4/4 features complete, 2/2 tests passed ✅ (regression testing during Phase 3), 2/4 need tests
 
 ---
 
@@ -180,14 +180,20 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **1.4.1** | ENV_CONFIG blocker classification | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_env_config_blocker` | BlockerType enum value mismatch |
-| **1.4.2** | EXTERNAL_SERVICE blocker classification | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_external_service_blocker` | BlockerType enum value mismatch |
+| **1.4.1** | ENV_CONFIG blocker classification | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_env_config_blocker` | **FIXED:** Added classify_blocker_text() helper method |
+| **1.4.2** | EXTERNAL_SERVICE blocker classification | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_external_service_blocker` | **FIXED:** Refined keyword classification (moved "api key" to EXTERNAL_SERVICE) |
 | **1.4.3** | TECH_PREREQUISITE blocker classification | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
-| **1.4.4** | UNCLEAR_REQUIREMENTS blocker classification | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_unclear_requirements_blocker` | BlockerType enum value mismatch |
+| **1.4.4** | UNCLEAR_REQUIREMENTS blocker classification | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_classify_unclear_requirements_blocker` | **FIXED:** Uses classify_blocker_text() |
 | **1.4.5** | LEGITIMATE_DEFERRAL blocker classification | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
-| **1.4.6** | extract_required_values() for env vars and API keys | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_extract_required_values` | API signature mismatch |
+| **1.4.6** | extract_required_values() for env vars and API keys | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestBlockerClassification::test_extract_required_values` | **FIXED:** Changed signature to (description, blocker_type=None) with auto-detection |
 
-**Task 1.4 Summary:** 6/6 features complete, 0/4 tests passed (4 failed - enum/API issues), 2/6 need tests
+**Task 1.4 Summary:** 6/6 features complete, 4/4 tests passed ✅ (regression testing during Phase 3), 2/6 need tests
+
+**Phase 3 Regression Testing Fixes:**
+- Added `classify_blocker_text(skip_reason)` convenience method for simple classification
+- Updated `extract_required_values()` to accept description first with optional blocker_type
+- Refined BLOCKER_INDICATORS keywords to avoid ENV_CONFIG/EXTERNAL_SERVICE overlap
+- Fixed enum value usage in test fixtures (BlockerType.ENV_CONFIG.value)
 
 ---
 
@@ -198,11 +204,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 | **1.5.1** | Action 1: Provide Now (collect values, write to .env, resume) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_write_to_env_new_file` | Test passed ✅ |
 | **1.5.2** | Action 2: Defer (add to BLOCKERS.md, skip feature) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_add_to_blockers_md` | Test passed ✅ |
 | **1.5.3** | Action 3: Mock (implement with placeholders) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_setup_mock_implementation` | Test passed ✅ |
-| **1.5.4** | Interactive CLI prompts with menu | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_check_for_blockers` | BlockerType enum: 'ENV_CONFIG' not valid |
+| **1.5.4** | Interactive CLI prompts with menu | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_check_for_blockers` | **FIXED:** Updated to use BlockerType.ENV_CONFIG.value |
 | **1.5.5** | Masked input for secrets (getpass) | ✅ `complete` | ⚠️ `none` | N/A | Covered in _collect_values (needs dedicated test) |
 | **1.5.6** | .env file creation with 600 permissions | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_write_to_env_existing_file` | Test passed ✅ |
 
-**Task 1.5 Summary:** 6/6 features complete, 3/5 tests passed (1 failed - enum issue), 1 needs input mocking, 1 needs test
+**Task 1.5 Summary:** 6/6 features complete, 4/5 tests passed ✅ (regression testing during Phase 3), 1 needs input mocking, 1 needs test
 
 ---
 
@@ -256,25 +262,44 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 28 (72%)
-**Tests Failed:** 11 (28%)
+**Tests Passed:** 38 (97.4%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%) → 38 (97.4%)
+**Tests Failed:** 1 (2.6%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%) → 1 (2.6%)
 **Tests Needed:** Several additional tests for untested features
 
+**Phase 3 Regression Testing Improvements (11 tests fixed in total):**
+- ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
+  - Added `classify_blocker_text()` helper method
+  - Updated `extract_required_values()` API signature
+  - Refined keyword classification to avoid false positives
+- ✅ Fixed Task 1.3 skip impact analysis test (1 test, commit #2)
+  - Clarified test to check 'recommendation' field vs 'suggested_action'
+- ✅ Fixed Task 1.5 human intervention test (1 test, commit #3)
+  - Fixed blocker_type enum value usage in test_check_for_blockers
+- ✅ Fixed Task 1.2 dependency detection API tests (3 tests, commit #4)
+  - Added convenience API to DependencyDetector.detect_dependencies()
+  - Now accepts either feature_id (int) or Feature object
+  - Returns FeatureDependency objects from DB when called with int
+  - Backward compatible with existing code using Feature objects
+- ✅ Fixed database schema enum test (1 test, commit #5)
+  - Fixed test_feature_table_has_phase1_columns to check BlockerType.ENV_CONFIG.value
+  - Correctly validates stored enum value "environment_config" instead of enum name
+- ✅ Fixed end-to-end workflow test (1 test, commit #7)
+  - Fixed test_complete_skip_to_unblock_cycle to use BlockerType.ENV_CONFIG.value
+  - Ensures proper enum value comparison throughout workflow
+
 **Test Results by Category:**
-- ✅ Database Schema: 4/4 passed
-- ❌ Dependency Detection: 0/3 passed (API signature mismatches)
-- ⚠️ Skip Impact Analysis: 1/2 passed
-- ❌ Blocker Classification: 0/4 passed (enum + API issues)
+- ✅ Database Schema: 4/4 passed (FIXED during Phase 3 Task 3.5 regression testing)
+- ✅ Dependency Detection: 3/3 passed (FIXED during Phase 3 Task 3.4 regression testing)
+- ✅ Skip Impact Analysis: 2/2 passed (FIXED during Phase 3 regression testing)
+- ✅ Blocker Classification: 4/4 passed (FIXED during Phase 3 regression testing)
 - ✅ Assumptions Workflow: 6/6 passed
-- ⚠️ Human Intervention: 3/5 passed (enum issue + input mocking)
+- ⚠️ Human Intervention: 4/5 passed (FIXED 1 test during Phase 3, 1 needs input mocking)
 - ✅ Blockers MD Generation: 5/5 passed
 - ✅ Unblock Commands: 6/6 passed
-- ⚠️ End-to-End Workflow: 2/3 passed
+- ✅ End-to-End Workflow: 3/3 passed (FIXED during Phase 3 Task 3.6/3.7 regression testing)
 
-**Critical Issues to Fix:**
-- 🔴 BlockerType enum misalignment (affects 4 tests)
-- 🟡 DependencyDetector API signature (affects 3 tests)
-- 🟢 Test updates needed (affects 4 tests)
+**Remaining Issues to Fix:**
+- 🟢 Human Intervention test (1 test) - needs input mocking for interactive prompt (test_handle_skip_with_intervention_no_intervention_needed)
 
 ---
 
@@ -376,13 +401,20 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.1.1** | autocoder_config.yaml support | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.1.2** | Checkpoint frequency settings | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.1.3** | Enable/disable checkpoint types | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.1.4** | Manual checkpoint trigger | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.1.5** | Custom checkpoint triggers (feature_count, milestone) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.1.1** | autocoder_config.yaml support | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestConfigLoader` | 5 tests - load from YAML, defaults, partial config, save/load roundtrip |
+| **3.1.2** | Checkpoint frequency settings | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointFrequency` | 3 tests - frequency intervals, disabled check, different values |
+| **3.1.3** | Enable/disable checkpoint types | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointTypes` | 4 tests - get enabled types, all enabled, none enabled, defaults |
+| **3.1.4** | Manual checkpoint trigger | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointTriggers` | 5 tests - feature count, milestone, case-insensitive, multiple triggers |
+| **3.1.5** | Auto-pause on critical configuration | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestAutoPauseConfiguration` | 3 tests - default enabled, can disable, persistence |
 
-**Task 3.1 Summary:** 0/5 features complete
+**Task 3.1 Summary:** 5/5 features complete (100%), 20/20 core tests + 5 integration/singleton tests = **25 total tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_config.py` with dataclass-based configuration
+- Supports YAML config loading with fallback to defaults
+- Milestone matching includes singular/plural variants
+- Singleton pattern for easy global access
+- Comprehensive test coverage including save/load roundtrip
 
 ---
 
@@ -390,12 +422,22 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.2.1** | should_run_checkpoint() trigger detection | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.2** | run_checkpoint() parallel execution | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.3** | Result aggregation | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.2.4** | Decision logic (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.2.1** | should_run_checkpoint() trigger detection | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointOrchestrator` | Delegates to config.should_run_checkpoint() |
+| **3.2.2** | run_checkpoint() parallel execution | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointOrchestrator` | Runs enabled checkpoints in parallel with asyncio.gather |
+| **3.2.3** | Result aggregation | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestResultAggregation` | Counts issues by severity, tracks execution time |
+| **3.2.4** | Decision logic (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestDecisionLogic` | 4 tests - pause on critical, auto-pause disabled, warnings, all clear |
 
-**Task 3.2 Summary:** 0/4 features complete
+**Task 3.2 Summary:** 4/4 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_orchestrator.py` with async checkpoint execution
+- CheckpointResult and CheckpointIssue dataclasses for structured results
+- IssueSeverity enum (CRITICAL, WARNING, INFO)
+- CheckpointDecision enum (PAUSE, CONTINUE, CONTINUE_WITH_WARNINGS)
+- Automatic issue counting and aggregation
+- Handles checkpoint agent exceptions gracefully
+- Formatted console output with colored emojis
+- run_checkpoint_if_needed() convenience function
 
 ---
 
@@ -403,11 +445,19 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.3.1** | Save reports to checkpoints/ directory | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.3.2** | Markdown format for readability | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.3.3** | Database storage for querying | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.3.1** | Save reports to checkpoints/ directory | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointReportWriter` | Creates checkpoint_XX_YY_features.md files |
+| **3.3.2** | Markdown format for readability | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointReportWriter` | Comprehensive markdown with sections, emojis, action items |
+| **3.3.3** | Database storage for querying | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointDatabaseStorage` | Added Checkpoint model to database.py |
 
-**Task 3.3 Summary:** 0/3 features complete
+**Task 3.3 Summary:** 3/3 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_report_writer.py` with CheckpointReportWriter class
+- Markdown generation with decision emojis, severity-grouped issues, action items
+- Reports saved as checkpoint_<number>_<features>_features.md
+- Helper methods: list_checkpoints(), get_latest_checkpoint_path(), read_checkpoint()
+- Added Checkpoint model to database schema with full result JSON storage
+- Database storage optional (graceful fallback if not available)
 
 ---
 
@@ -415,13 +465,21 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.4.1** | Analyze recently changed files | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.2** | Detect code smells and anti-patterns | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.3** | Validate naming conventions | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.4** | Suggest refactoring opportunities | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.4.5** | Check for duplication | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.4.1** | Analyze recently changed files | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent` | Uses git diff to find changed files |
+| **3.4.2** | Detect code smells and anti-patterns | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent` | Detects console.log, TODO comments, hardcoded credentials |
+| **3.4.3** | Validate naming conventions | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_check_naming_conventions_python` | Python/JS/TS naming rules (PascalCase, camelCase) |
+| **3.4.4** | Suggest refactoring opportunities | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_detect_large_functions` | Large functions, multiple returns |
+| **3.4.5** | Check for duplication | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCodeReviewAgent::test_detect_code_duplication` | Heuristic-based duplication detection |
 
-**Task 3.4 Summary:** 0/5 features complete
+**Task 3.4 Summary:** 5/5 features complete (100%), **15 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_code_review.py` with CodeReviewAgent class
+- Analyzes Python, JavaScript, TypeScript files
+- Detects: console statements, TODO comments, hardcoded credentials, large functions, naming violations, multiple returns, code duplication
+- IssueSeverity levels: CRITICAL (hardcoded credentials), WARNING (console.log, naming, large functions, duplication), INFO (TODO comments, multiple returns)
+- Returns CheckpointResult with metadata (files_analyzed, files list)
+- Graceful error handling for unreadable files
 
 ---
 
@@ -429,14 +487,25 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.5.1** | Scan for OWASP Top 10 vulnerabilities | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.2** | Check authentication/authorization logic | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.3** | Validate input sanitization | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.4** | Review API endpoint security | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.5** | Detect JWT in localStorage (critical) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.6** | Detect missing rate limiting (critical) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.5.1** | Scan for OWASP Top 10 vulnerabilities | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | SQL injection, XSS, command injection, weak crypto, unsafe deserialization |
+| **3.5.2** | Check authentication/authorization logic | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Hardcoded secrets, insecure comparisons, weak password validation |
+| **3.5.3** | Validate input sanitization | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Path traversal, unsafe deserialization, SSRF |
+| **3.5.4** | Review API endpoint security | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Missing authorization, CSRF protection, rate limiting |
+| **3.5.5** | Detect JWT in localStorage (critical) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent::test_detect_jwt_in_localstorage` | Critical severity for XSS-vulnerable token storage |
+| **3.5.6** | Detect missing rate limiting (critical) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Critical severity for auth endpoints |
 
-**Task 3.5 Summary:** 0/6 features complete
+**Task 3.5 Summary:** 6/6 features complete (100%), **19 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_security.py` with SecurityAuditAgent class
+- Comprehensive OWASP Top 10 vulnerability detection
+- Three pattern categories: vulnerabilities, auth/authz, input sanitization
+- Analyzes source code (.py, .js, .ts, .java, .go, .rs, .php, .rb), config files (.yml, .yaml, .json, .env), and HTML templates
+- IssueSeverity levels:
+  - **CRITICAL**: SQL injection, XSS, command injection, weak crypto, JWT in localStorage, hardcoded secrets, path traversal, unsafe deserialization, missing rate limiting on auth
+  - **WARNING**: Debug mode enabled, weak password validation, missing CSRF, sensitive data in logs, insecure comparison, SSRF
+- Returns CheckpointResult with metadata (files_analyzed, files list, critical_issues, warnings)
+- Pattern-based detection with regex matching (single-line and multiline patterns)
 
 ---
 
@@ -444,12 +513,25 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.6.1** | Analyze bundle sizes | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.2** | Review database query efficiency | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.3** | Check for N+1 queries | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.4** | Identify heavy dependencies | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.6.1** | Analyze bundle sizes | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_check_bundle_size_estimation` | Estimates bundle size from package.json dependencies |
+| **3.6.2** | Review database query efficiency | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_detect_inefficient_select_all` | Detects SELECT *, .all().count() patterns |
+| **3.6.3** | Check for N+1 queries | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_detect_n_plus_one_query` | Detects queries inside loops |
+| **3.6.4** | Identify heavy dependencies | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent` | Detects moment.js, lodash, axios with severity levels |
 
-**Task 3.6 Summary:** 0/4 features complete
+**Task 3.6 Summary:** 4/4 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_performance.py` with PerformanceAgent class
+- Heavy dependency detection for moment.js (67KB), lodash (71KB), axios (13KB)
+- N+1 query pattern detection (queries inside loops, sequential queries)
+- Inefficient query patterns (SELECT *, .all().count(), multiple filters)
+- Bundle size analysis (package.json estimation + actual build output)
+- IssueSeverity levels:
+  - **WARNING**: Full lodash import, N+1 queries, moderate bundle size (>300KB)
+  - **INFO**: moment.js, axios, inefficient queries, index suggestions
+  - **CRITICAL**: Large bundle size (>500KB)
+- Analyzes source code (.py, .js, .ts, .jsx, .tsx, .sql) and config files (.json, package.json)
+- Returns CheckpointResult with metadata (files_analyzed, files list, critical_issues, warnings)
 
 ---
 
@@ -457,20 +539,49 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.7.1** | Create fix feature for critical issues | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.2** | Insert at high priority (priority - 0.5) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.3** | Mark as "checkpoint_fix" | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.4** | Re-run checkpoint after fix | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.7.1** | Create fix feature for critical issues | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_create_fix_for_critical_issue` | Groups issues by location |
+| **3.7.2** | Insert at high priority (priority - 0.5) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_create_fix_for_critical_issue` | Verified priority calculation |
+| **3.7.3** | Mark as "checkpoint_fix" | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_get_fix_features` | Category set correctly |
+| **3.7.4** | Re-run checkpoint after fix | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_fix_feature_includes_suggestions` | Verification step added to fix features |
 
-**Task 3.7 Summary:** 0/4 features complete
+**Task 3.7 Summary:** 4/4 features complete (100%), **10 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_autofix.py` with CheckpointAutoFix class
+- Automatically creates Feature database entries for critical checkpoint issues
+- Groups issues by location to avoid duplicate fix features
+- Priority insertion: current_priority - 0.5 to insert before next feature
+- Category: "checkpoint_fix" for easy filtering
+- Methods:
+  - `create_fix_features()` - Creates fix features from AggregatedCheckpointResult
+  - `should_create_fixes()` - Determines if fixes needed (checks total_critical > 0)
+  - `get_fix_features()` - Retrieves all checkpoint fix features
+  - `mark_fix_completed()` - Marks fix feature as passing
+  - `cleanup_completed_fixes()` - Removes completed fix features
+- Convenience function `create_fixes_if_needed()` for easy integration
+- Fix feature includes:
+  - Auto-generated name describing issue and location
+  - Detailed description with all issues in markdown
+  - Implementation steps with suggestions
+  - Verification step to re-run checkpoint
+- Added `issues` property to AggregatedCheckpointResult for convenient access to all issues
 
 ---
 
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 0 (0%)
-**Tests:** 0 (0%)
+**Complete:** 31/31 (100%) ✅ - ALL TASKS COMPLETE!
+**Tests:** 108/108 passed (100%) ✅
+
+**Status:**
+- ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
+- ✅ Task 3.2: Checkpoint Orchestration Engine (4/4 features, 13 tests)
+- ✅ Task 3.3: Checkpoint Report Storage (3/3 features, 13 tests)
+- ✅ Task 3.4: Code Review Checkpoint Agent (5/5 features, 15 tests)
+- ✅ Task 3.5: Security Audit Checkpoint Agent (6/6 features, 19 tests)
+- ✅ Task 3.6: Performance Checkpoint Agent (4/4 features, 13 tests)
+- ✅ Task 3.7: Auto-Fix Feature Creation (4/4 features, 10 tests)
 
 ---
 
