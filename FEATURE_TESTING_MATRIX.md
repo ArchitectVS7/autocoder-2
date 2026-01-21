@@ -262,11 +262,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 36 (92%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%)
-**Tests Failed:** 3 (8%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%)
+**Tests Passed:** 37 (95%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%)
+**Tests Failed:** 2 (5%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%)
 **Tests Needed:** Several additional tests for untested features
 
-**Phase 3 Regression Testing Improvements (9 tests fixed in total):**
+**Phase 3 Regression Testing Improvements (10 tests fixed in total):**
 - ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
   - Added `classify_blocker_text()` helper method
   - Updated `extract_required_values()` API signature
@@ -280,9 +280,12 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
   - Now accepts either feature_id (int) or Feature object
   - Returns FeatureDependency objects from DB when called with int
   - Backward compatible with existing code using Feature objects
+- ✅ Fixed database schema enum test (1 test, commit #5)
+  - Fixed test_feature_table_has_phase1_columns to check BlockerType.ENV_CONFIG.value
+  - Correctly validates stored enum value "environment_config" instead of enum name
 
 **Test Results by Category:**
-- ⚠️ Database Schema: 3/4 passed (1 enum value test still failing)
+- ✅ Database Schema: 4/4 passed (FIXED during Phase 3 Task 3.5 regression testing)
 - ✅ Dependency Detection: 3/3 passed (FIXED during Phase 3 Task 3.4 regression testing)
 - ✅ Skip Impact Analysis: 2/2 passed (FIXED during Phase 3 regression testing)
 - ✅ Blocker Classification: 4/4 passed (FIXED during Phase 3 regression testing)
@@ -293,7 +296,6 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ⚠️ End-to-End Workflow: 2/3 passed
 
 **Remaining Issues to Fix:**
-- 🟢 Database Schema test (1 test) - enum value assertion
 - 🟢 Human Intervention test (1 test) - needs input mocking for interactive prompt
 - 🟢 End-to-End Workflow test (1 test) - integration test needs debugging
 
@@ -483,14 +485,25 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.5.1** | Scan for OWASP Top 10 vulnerabilities | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.2** | Check authentication/authorization logic | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.3** | Validate input sanitization | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.4** | Review API endpoint security | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.5** | Detect JWT in localStorage (critical) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.5.6** | Detect missing rate limiting (critical) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.5.1** | Scan for OWASP Top 10 vulnerabilities | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | SQL injection, XSS, command injection, weak crypto, unsafe deserialization |
+| **3.5.2** | Check authentication/authorization logic | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Hardcoded secrets, insecure comparisons, weak password validation |
+| **3.5.3** | Validate input sanitization | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Path traversal, unsafe deserialization, SSRF |
+| **3.5.4** | Review API endpoint security | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Missing authorization, CSRF protection, rate limiting |
+| **3.5.5** | Detect JWT in localStorage (critical) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent::test_detect_jwt_in_localstorage` | Critical severity for XSS-vulnerable token storage |
+| **3.5.6** | Detect missing rate limiting (critical) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestSecurityAuditAgent` | Critical severity for auth endpoints |
 
-**Task 3.5 Summary:** 0/6 features complete
+**Task 3.5 Summary:** 6/6 features complete (100%), **19 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_security.py` with SecurityAuditAgent class
+- Comprehensive OWASP Top 10 vulnerability detection
+- Three pattern categories: vulnerabilities, auth/authz, input sanitization
+- Analyzes source code (.py, .js, .ts, .java, .go, .rs, .php, .rb), config files (.yml, .yaml, .json, .env), and HTML templates
+- IssueSeverity levels:
+  - **CRITICAL**: SQL injection, XSS, command injection, weak crypto, JWT in localStorage, hardcoded secrets, path traversal, unsafe deserialization, missing rate limiting on auth
+  - **WARNING**: Debug mode enabled, weak password validation, missing CSRF, sensitive data in logs, insecure comparison, SSRF
+- Returns CheckpointResult with metadata (files_analyzed, files list, critical_issues, warnings)
+- Pattern-based detection with regex matching (single-line and multiline patterns)
 
 ---
 
@@ -523,15 +536,16 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 17/31 (55%) - Tasks 3.1, 3.2, 3.3, and 3.4 complete
-**Tests:** 66/66 passed (100%)
+**Complete:** 23/31 (74%) - Tasks 3.1, 3.2, 3.3, 3.4, and 3.5 complete
+**Tests:** 85/85 passed (100%)
 
 **Status:**
 - ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
 - ✅ Task 3.2: Checkpoint Orchestration Engine (4/4 features, 13 tests)
 - ✅ Task 3.3: Checkpoint Report Storage (3/3 features, 13 tests)
 - ✅ Task 3.4: Code Review Checkpoint Agent (5/5 features, 15 tests)
-- 🔵 Task 3.5-3.7: Remaining Checkpoint Agents (0/14 features)
+- ✅ Task 3.5: Security Audit Checkpoint Agent (6/6 features, 19 tests)
+- 🔵 Task 3.6-3.7: Performance + Auto-Fix (0/8 features)
 
 ---
 

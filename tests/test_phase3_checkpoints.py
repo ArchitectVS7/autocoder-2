@@ -1547,3 +1547,451 @@ function getUser(id: number): User {
 
         # Should find issues
         assert len(result.issues) >= 1
+
+
+# =============================================================================
+# Task 3.5: Security Audit Checkpoint Agent
+# =============================================================================
+
+from checkpoint_agent_security import SecurityAuditAgent
+
+
+class TestSecurityAuditAgent:
+    """Test security audit checkpoint agent."""
+
+    def test_analyze_no_changes(self, git_project_dir):
+        """Should return PASS when no files changed."""
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.checkpoint_type == 'security_audit'
+        assert result.status == 'PASS'
+        assert len(result.issues) == 0
+        assert result.metadata['files_analyzed'] == 0
+
+    def test_detect_sql_injection(self, git_project_dir):
+        """Should detect SQL injection vulnerabilities."""
+        test_file = git_project_dir / "database.py"
+        test_file.write_text("""
+def get_user(user_id):
+    query = "SELECT * FROM users WHERE id = " + user_id
+    cursor.execute(query)
+    return cursor.fetchone()
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add SQL'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.checkpoint_type == 'security_audit'
+        assert result.status == 'FAIL'  # Critical issue
+
+        # Check for SQL injection issue
+        sql_issues = [i for i in result.issues if 'sql injection' in i.title.lower()]
+        assert len(sql_issues) > 0
+        assert sql_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_xss_vulnerability(self, git_project_dir):
+        """Should detect XSS vulnerabilities."""
+        test_file = git_project_dir / "render.js"
+        test_file.write_text("""
+function displayMessage(msg) {
+    document.getElementById('output').innerHTML = msg;
+}
+
+function showAlert(text) {
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    document.body.appendChild(div);
+}
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add XSS'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for XSS issue
+        xss_issues = [i for i in result.issues if 'xss' in i.title.lower()]
+        assert len(xss_issues) > 0
+        assert xss_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_jwt_in_localstorage(self, git_project_dir):
+        """Should detect JWT tokens stored in localStorage."""
+        test_file = git_project_dir / "auth.js"
+        test_file.write_text("""
+function saveToken(token) {
+    localStorage.setItem('authToken', token);
+}
+
+function saveJWT(jwt) {
+    localStorage.setItem('jwt', jwt);
+}
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add JWT'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for JWT in localStorage issue
+        jwt_issues = [i for i in result.issues if 'jwt' in i.title.lower() or 'localstorage' in i.title.lower()]
+        assert len(jwt_issues) > 0
+        assert jwt_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_weak_crypto(self, git_project_dir):
+        """Should detect weak cryptographic algorithms."""
+        test_file = git_project_dir / "crypto.py"
+        test_file.write_text("""
+import hashlib
+
+def hash_password(password):
+    return hashlib.md5(password.encode()).hexdigest()
+
+def hash_data(data):
+    return hashlib.sha1(data.encode()).hexdigest()
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add crypto'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for weak crypto issue
+        crypto_issues = [i for i in result.issues if 'crypto' in i.title.lower() or 'weak' in i.title.lower()]
+        assert len(crypto_issues) > 0
+        assert crypto_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_command_injection(self, git_project_dir):
+        """Should detect command injection vulnerabilities."""
+        test_file = git_project_dir / "exec.py"
+        test_file.write_text("""
+import os
+
+def run_command(user_input):
+    os.system("ls " + user_input)
+
+def execute(cmd):
+    subprocess.run(f"echo {cmd}", shell=True)
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add exec'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for command injection issue
+        cmd_issues = [i for i in result.issues if 'command injection' in i.title.lower()]
+        assert len(cmd_issues) > 0
+        assert cmd_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_hardcoded_secret(self, git_project_dir):
+        """Should detect hardcoded secret keys."""
+        test_file = git_project_dir / "config.py"
+        test_file.write_text("""
+SECRET_KEY = "my-super-secret-key-12345"
+JWT_SECRET = "jwt-secret-abc123"
+
+app.config['SECRET_KEY'] = 'hardcoded-secret'
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add config'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for hardcoded secret issue
+        secret_issues = [i for i in result.issues if 'secret' in i.title.lower()]
+        assert len(secret_issues) > 0
+        assert secret_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_path_traversal(self, git_project_dir):
+        """Should detect path traversal vulnerabilities."""
+        test_file = git_project_dir / "files.py"
+        test_file.write_text("""
+def read_file(filename):
+    # User input directly in file path
+    with open(request.args.get('file'), 'r') as f:
+        return f.read()
+
+def load_data(path):
+    return Path(input("Enter path: ")).read_text()
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add files'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for path traversal issue
+        path_issues = [i for i in result.issues if 'path traversal' in i.title.lower()]
+        assert len(path_issues) > 0
+        assert path_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_unsafe_deserialization(self, git_project_dir):
+        """Should detect unsafe deserialization."""
+        test_file = git_project_dir / "deserialize.py"
+        test_file.write_text("""
+import pickle
+import yaml
+
+def load_data(data):
+    return pickle.loads(data)
+
+def load_config(config_str):
+    return yaml.load(config_str)  # Missing Loader argument
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add deserialize'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+        # Check for unsafe deserialization issue
+        deser_issues = [i for i in result.issues if 'deserialization' in i.title.lower()]
+        assert len(deser_issues) > 0
+        assert deser_issues[0].severity == IssueSeverity.CRITICAL
+
+    def test_detect_debug_mode(self, git_project_dir):
+        """Should detect debug mode enabled."""
+        test_file = git_project_dir / "settings.py"
+        test_file.write_text("""
+DEBUG = True
+app.debug = True
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add settings'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Debug mode is WARNING, not FAIL
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+        # Check for debug mode issue
+        debug_issues = [i for i in result.issues if 'debug' in i.title.lower()]
+        assert len(debug_issues) > 0
+        assert debug_issues[0].severity == IssueSeverity.WARNING
+
+    def test_detect_weak_password_validation(self, git_project_dir):
+        """Should detect weak password requirements."""
+        test_file = git_project_dir / "validate.py"
+        test_file.write_text("""
+def validate_password(password):
+    if len(password) < 6:
+        return False
+    return True
+
+def check_pwd(pwd):
+    return pwd.length >= 4
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add validate'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+        # Check for weak password issue
+        pwd_issues = [i for i in result.issues if 'password' in i.title.lower()]
+        assert len(pwd_issues) > 0
+        assert pwd_issues[0].severity == IssueSeverity.WARNING
+
+    def test_detect_sensitive_data_in_logs(self, git_project_dir):
+        """Should detect sensitive data in logs."""
+        test_file = git_project_dir / "logger.py"
+        test_file.write_text("""
+def login(username, password):
+    logger.info(f"Login attempt: {username} with password {password}")
+    print(f"Token: {token}")
+    console.log("Secret: " + secret)
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add logger'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+        # Check for sensitive data in logs issue
+        log_issues = [i for i in result.issues if 'log' in i.title.lower() and 'sensitive' in i.title.lower()]
+        assert len(log_issues) > 0
+        assert log_issues[0].severity == IssueSeverity.WARNING
+
+    def test_detect_missing_csrf_protection(self, git_project_dir):
+        """Should detect missing CSRF protection."""
+        test_file = git_project_dir / "form.html"
+        test_file.write_text("""
+<form method="post" action="/submit">
+    <input type="text" name="data" />
+    <button type="submit">Submit</button>
+</form>
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add form'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+        # Check for missing CSRF issue
+        csrf_issues = [i for i in result.issues if 'csrf' in i.title.lower()]
+        assert len(csrf_issues) > 0
+        assert csrf_issues[0].severity == IssueSeverity.WARNING
+
+    def test_detect_insecure_comparison(self, git_project_dir):
+        """Should detect insecure comparisons."""
+        test_file = git_project_dir / "auth_check.py"
+        test_file.write_text("""
+def verify_password(stored, provided):
+    if stored == provided:
+        return True
+    return False
+
+def check_token(token):
+    if token == SECRET_TOKEN:
+        return True
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add auth check'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'PASS_WITH_WARNINGS'
+
+        # Check for insecure comparison issue
+        comp_issues = [i for i in result.issues if 'comparison' in i.title.lower()]
+        assert len(comp_issues) > 0
+
+    def test_analyze_multiple_files(self, git_project_dir):
+        """Should analyze multiple files for security issues."""
+        file1 = git_project_dir / "file1.py"
+        file1.write_text('query = "SELECT * FROM users WHERE id = " + user_id')
+
+        file2 = git_project_dir / "file2.js"
+        file2.write_text('div.innerHTML = userInput;')
+
+        file3 = git_project_dir / "file3.py"
+        file3.write_text('return hashlib.md5(password).hexdigest()')
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add multiple files'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should analyze all 3 files
+        assert result.metadata['files_analyzed'] == 3
+        assert len(result.metadata['files']) == 3
+
+        # Should find issues in all files
+        assert len(result.issues) >= 3
+        assert result.status == 'FAIL'
+
+    def test_metadata_includes_issue_counts(self, git_project_dir):
+        """Should include issue counts in metadata."""
+        test_file = git_project_dir / "mixed.py"
+        test_file.write_text("""
+# Critical issue
+query = "SELECT * FROM users WHERE id = " + user_id
+
+# Warning issue
+DEBUG = True
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add mixed'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert 'critical_issues' in result.metadata
+        assert 'warnings' in result.metadata
+        assert result.metadata['critical_issues'] > 0
+        assert result.metadata['warnings'] > 0
+
+    def test_status_reflects_severity(self, git_project_dir):
+        """Should set status based on issue severity."""
+        # Test FAIL status (critical issues)
+        crit_file = git_project_dir / "critical.py"
+        crit_file.write_text('query = "SELECT * FROM users WHERE id = " + user_id')
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add critical issue'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        assert result.status == 'FAIL'
+
+    def test_analyzes_config_files(self, git_project_dir):
+        """Should analyze configuration files."""
+        config_file = git_project_dir / "config.yml"
+        config_file.write_text("""
+database:
+  password: hardcoded123
+secret_key: my-secret-key
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add config'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should analyze YAML file
+        assert result.metadata['files_analyzed'] == 1
+        assert 'config.yml' in result.metadata['files'][0]
+
+    def test_analyzes_html_templates(self, git_project_dir):
+        """Should analyze HTML template files."""
+        template = git_project_dir / "template.html"
+        template.write_text("""
+<form method="post" action="/login">
+    <input type="text" name="username" />
+    <input type="password" name="password" />
+    <button type="submit">Login</button>
+</form>
+""")
+
+        subprocess.run(['git', 'add', '.'], cwd=git_project_dir, check=True, capture_output=True)
+        subprocess.run(['git', 'commit', '--no-verify', '-m', 'Add template'], cwd=git_project_dir, check=True, capture_output=True)
+
+        agent = SecurityAuditAgent(git_project_dir)
+        result = agent.analyze(commits=1)
+
+        # Should analyze HTML file
+        assert result.metadata['files_analyzed'] == 1
+        assert 'template.html' in result.metadata['files'][0]

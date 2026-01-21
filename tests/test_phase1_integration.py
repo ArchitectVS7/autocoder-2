@@ -132,7 +132,7 @@ class TestDatabaseSchema:
         saved = db_session.query(Feature).filter(Feature.id == feature.id).first()
         assert saved.was_skipped is True
         assert saved.skip_count == 2
-        assert saved.blocker_type == "ENV_CONFIG"
+        assert saved.blocker_type == BlockerType.ENV_CONFIG.value  # "environment_config"
         assert saved.blocker_description == "Test blocker"
         assert saved.is_blocked is True
         assert saved.passing_with_mocks is True
