@@ -218,6 +218,7 @@ Comprehensive test suite organized by phase:
 - `tests/test_phase3_checkpoints.py` - Phase 3: Checkpoint system tests
 - `tests/test_phase4_personas.py` - Phase 4: Persona definition system tests
 - `tests/test_phase4_design_iteration.py` - Phase 4: Design iteration workflow tests
+- `tests/test_phase5_*.py` - Phase 5: Integration & polish tests (TBD)
 
 ### Documentation (docs/)
 
