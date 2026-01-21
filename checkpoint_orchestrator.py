@@ -106,6 +106,14 @@ class AggregatedCheckpointResult:
     total_info: int = 0
     total_execution_time_ms: float = 0.0
 
+    @property
+    def issues(self) -> List[CheckpointIssue]:
+        """Get all issues from all checkpoint results."""
+        all_issues = []
+        for result in self.results:
+            all_issues.extend(result.issues)
+        return all_issues
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {

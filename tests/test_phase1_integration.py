@@ -921,7 +921,7 @@ class TestEndToEndWorkflow:
         # 1. Skip feature with ENV_CONFIG blocker
         feature = db_session.query(Feature).filter(Feature.id == 5).first()
         assert feature.was_skipped is True
-        assert feature.blocker_type == "ENV_CONFIG"
+        assert feature.blocker_type == BlockerType.ENV_CONFIG.value  # "environment_config"
 
         # 2. Create blocker record
         blocker = FeatureBlocker(

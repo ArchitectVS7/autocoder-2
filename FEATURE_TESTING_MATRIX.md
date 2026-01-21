@@ -262,11 +262,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 37 (95%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%)
-**Tests Failed:** 2 (5%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%)
+**Tests Passed:** 38 (97.4%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%) → 38 (97.4%)
+**Tests Failed:** 1 (2.6%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%) → 1 (2.6%)
 **Tests Needed:** Several additional tests for untested features
 
-**Phase 3 Regression Testing Improvements (10 tests fixed in total):**
+**Phase 3 Regression Testing Improvements (11 tests fixed in total):**
 - ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
   - Added `classify_blocker_text()` helper method
   - Updated `extract_required_values()` API signature
@@ -283,6 +283,9 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ✅ Fixed database schema enum test (1 test, commit #5)
   - Fixed test_feature_table_has_phase1_columns to check BlockerType.ENV_CONFIG.value
   - Correctly validates stored enum value "environment_config" instead of enum name
+- ✅ Fixed end-to-end workflow test (1 test, commit #7)
+  - Fixed test_complete_skip_to_unblock_cycle to use BlockerType.ENV_CONFIG.value
+  - Ensures proper enum value comparison throughout workflow
 
 **Test Results by Category:**
 - ✅ Database Schema: 4/4 passed (FIXED during Phase 3 Task 3.5 regression testing)
@@ -293,11 +296,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ⚠️ Human Intervention: 4/5 passed (FIXED 1 test during Phase 3, 1 needs input mocking)
 - ✅ Blockers MD Generation: 5/5 passed
 - ✅ Unblock Commands: 6/6 passed
-- ⚠️ End-to-End Workflow: 2/3 passed
+- ✅ End-to-End Workflow: 3/3 passed (FIXED during Phase 3 Task 3.6/3.7 regression testing)
 
 **Remaining Issues to Fix:**
-- 🟢 Human Intervention test (1 test) - needs input mocking for interactive prompt
-- 🟢 End-to-End Workflow test (1 test) - integration test needs debugging
+- 🟢 Human Intervention test (1 test) - needs input mocking for interactive prompt (test_handle_skip_with_intervention_no_intervention_needed)
 
 ---
 
@@ -511,12 +513,25 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.6.1** | Analyze bundle sizes | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.2** | Review database query efficiency | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.3** | Check for N+1 queries | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.6.4** | Identify heavy dependencies | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.6.1** | Analyze bundle sizes | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_check_bundle_size_estimation` | Estimates bundle size from package.json dependencies |
+| **3.6.2** | Review database query efficiency | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_detect_inefficient_select_all` | Detects SELECT *, .all().count() patterns |
+| **3.6.3** | Check for N+1 queries | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent::test_detect_n_plus_one_query` | Detects queries inside loops |
+| **3.6.4** | Identify heavy dependencies | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestPerformanceAgent` | Detects moment.js, lodash, axios with severity levels |
 
-**Task 3.6 Summary:** 0/4 features complete
+**Task 3.6 Summary:** 4/4 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_agent_performance.py` with PerformanceAgent class
+- Heavy dependency detection for moment.js (67KB), lodash (71KB), axios (13KB)
+- N+1 query pattern detection (queries inside loops, sequential queries)
+- Inefficient query patterns (SELECT *, .all().count(), multiple filters)
+- Bundle size analysis (package.json estimation + actual build output)
+- IssueSeverity levels:
+  - **WARNING**: Full lodash import, N+1 queries, moderate bundle size (>300KB)
+  - **INFO**: moment.js, axios, inefficient queries, index suggestions
+  - **CRITICAL**: Large bundle size (>500KB)
+- Analyzes source code (.py, .js, .ts, .jsx, .tsx, .sql) and config files (.json, package.json)
+- Returns CheckpointResult with metadata (files_analyzed, files list, critical_issues, warnings)
 
 ---
 
@@ -524,20 +539,40 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.7.1** | Create fix feature for critical issues | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.2** | Insert at high priority (priority - 0.5) | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.3** | Mark as "checkpoint_fix" | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.7.4** | Re-run checkpoint after fix | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.7.1** | Create fix feature for critical issues | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_create_fix_for_critical_issue` | Groups issues by location |
+| **3.7.2** | Insert at high priority (priority - 0.5) | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_create_fix_for_critical_issue` | Verified priority calculation |
+| **3.7.3** | Mark as "checkpoint_fix" | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_get_fix_features` | Category set correctly |
+| **3.7.4** | Re-run checkpoint after fix | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointAutoFix::test_fix_feature_includes_suggestions` | Verification step added to fix features |
 
-**Task 3.7 Summary:** 0/4 features complete
+**Task 3.7 Summary:** 4/4 features complete (100%), **10 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_autofix.py` with CheckpointAutoFix class
+- Automatically creates Feature database entries for critical checkpoint issues
+- Groups issues by location to avoid duplicate fix features
+- Priority insertion: current_priority - 0.5 to insert before next feature
+- Category: "checkpoint_fix" for easy filtering
+- Methods:
+  - `create_fix_features()` - Creates fix features from AggregatedCheckpointResult
+  - `should_create_fixes()` - Determines if fixes needed (checks total_critical > 0)
+  - `get_fix_features()` - Retrieves all checkpoint fix features
+  - `mark_fix_completed()` - Marks fix feature as passing
+  - `cleanup_completed_fixes()` - Removes completed fix features
+- Convenience function `create_fixes_if_needed()` for easy integration
+- Fix feature includes:
+  - Auto-generated name describing issue and location
+  - Detailed description with all issues in markdown
+  - Implementation steps with suggestions
+  - Verification step to re-run checkpoint
+- Added `issues` property to AggregatedCheckpointResult for convenient access to all issues
 
 ---
 
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 23/31 (74%) - Tasks 3.1, 3.2, 3.3, 3.4, and 3.5 complete
-**Tests:** 85/85 passed (100%)
+**Complete:** 31/31 (100%) ✅ - ALL TASKS COMPLETE!
+**Tests:** 108/108 passed (100%) ✅
 
 **Status:**
 - ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
@@ -545,7 +580,8 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ✅ Task 3.3: Checkpoint Report Storage (3/3 features, 13 tests)
 - ✅ Task 3.4: Code Review Checkpoint Agent (5/5 features, 15 tests)
 - ✅ Task 3.5: Security Audit Checkpoint Agent (6/6 features, 19 tests)
-- 🔵 Task 3.6-3.7: Performance + Auto-Fix (0/8 features)
+- ✅ Task 3.6: Performance Checkpoint Agent (4/4 features, 13 tests)
+- ✅ Task 3.7: Auto-Fix Feature Creation (4/4 features, 10 tests)
 
 ---
 
