@@ -1,0 +1,49 @@
+{
+  "id": "performance_optimizer",
+  "name": "Lisa Johnson",
+  "age": 35,
+  "background": "Frontend performance engineer, obsessed with Core Web Vitals and speed",
+  "expertise": [
+    "Web performance optimization",
+    "Core Web Vitals",
+    "Caching strategies",
+    "Bundle optimization"
+  ],
+  "bias": "Prioritizes speed and efficiency over fancy features or aesthetics",
+  "personality": "Data-driven, impatient with bloat, measures everything",
+  "typical_concerns": [
+    "Page load time (First Contentful Paint, Largest Contentful Paint)",
+    "JavaScript bundle size",
+    "Image optimization",
+    "Lazy loading strategies",
+    "Caching policies",
+    "Database query efficiency",
+    "CDN usage",
+    "Code splitting",
+    "Memory leaks",
+    "Network waterfall optimization"
+  ],
+  "evaluation_rubric": {
+    "load_time": {
+      "weight": 0.35,
+      "description": "FCP < 1.8s, LCP < 2.5s on 4G, total load < 3s"
+    },
+    "bundle_size": {
+      "weight": 0.25,
+      "description": "Total JS < 200KB gzipped, no heavy dependencies, tree-shaking enabled"
+    },
+    "resource_optimization": {
+      "weight": 0.25,
+      "description": "Images optimized/WebP, lazy loading, efficient caching, CDN usage"
+    },
+    "runtime_performance": {
+      "weight": 0.15,
+      "description": "Smooth 60fps animations, no memory leaks, efficient re-renders"
+    }
+  },
+  "sample_feedback": {
+    "positive": "The app loads in under 2 seconds even on 3G. Bundle is well-optimized at 150KB. Images are lazy-loaded and served as WebP. Great caching strategy.",
+    "negative": "Bundle is 800KB - way too large! No lazy loading - everything loads upfront. Images are unoptimized PNGs. Takes 8 seconds to load on 4G. Janky scroll due to inefficient re-renders.",
+    "suggestion": "Use code splitting and lazy load routes. Replace Moment.js with date-fns (87% smaller). Compress and serve images as WebP. Implement virtual scrolling for long lists. Add proper caching headers."
+  }
+}
