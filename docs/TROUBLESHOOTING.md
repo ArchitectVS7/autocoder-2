@@ -825,6 +825,376 @@ session.commit()
 
 ---
 
-**Document Version:** 1.0
+## Phase 6: Workflow Integration Issues
+
+### Issue: Workflow Orchestrator Import Error
+
+**Symptoms:**
+- `ModuleNotFoundError: No module named 'integration'`
+- Import errors for WorkflowOrchestrator
+
+**Diagnosis:**
+```bash
+python3 -c "from integration.workflow_orchestrator import WorkflowOrchestrator"
+```
+
+**Solution:**
+
+Ensure you're running from project root:
+```bash
+cd /path/to/autocoder-2
+python3 -c "from integration.workflow_orchestrator import WorkflowOrchestrator"
+```
+
+Or add to PYTHONPATH:
+```bash
+export PYTHONPATH="/path/to/autocoder-2:$PYTHONPATH"
+```
+
+---
+
+### Issue: Configuration File Not Found
+
+**Symptoms:**
+- Using default configuration despite creating `autocoder_config.yaml`
+- Changes to config not taking effect
+
+**Diagnosis:**
+```bash
+# Check if config exists in project directory
+ls -la autocoder_config.yaml
+
+# Check where ConfigurationUI is looking
+python3 -c "
+from pathlib import Path
+from integration.config_ui import ConfigurationUI
+ui = ConfigurationUI(Path('.'))
+print(f'Config file: {ui.config_file}')
+print(f'Exists: {ui.config_file.exists()}')
+"
+```
+
+**Solution:**
+
+Ensure config is in the **project directory**, not autocoder-2 directory:
+```bash
+cd my-project  # Your project, not autocoder-2
+python -m integration.config_ui --show
+```
+
+If you want a global config, use `--project-dir`:
+```bash
+python -m integration.config_ui --project-dir my-project --show
+```
+
+---
+
+### Issue: Design Iteration Not Running
+
+**Symptoms:**
+- Workflow skips design iteration phase
+- No design_iteration_*.md files generated
+
+**Diagnosis:**
+```bash
+# Check configuration
+python -m integration.config_ui --show | grep "Design Iteration"
+```
+
+**Solution 1: Enable in Configuration**
+```bash
+python -m integration.config_ui --enable design
+```
+
+**Solution 2: Check if initial_spec Provided**
+```python
+# Design iteration requires initial_spec parameter
+result = await run_complete_workflow(
+    project_dir=Path("my-project"),
+    initial_spec="Build a dashboard...",  # Required for design iteration!
+    config=config
+)
+```
+
+---
+
+### Issue: UX Evaluation Failing
+
+**Symptoms:**
+- `Connection refused` errors
+- Screenshots not generated
+- UX evaluation returns None
+
+**Diagnosis:**
+```bash
+# Check if app is running
+curl http://localhost:3000
+
+# Check Playwright installation
+python3 -c "from playwright.sync_api import sync_playwright; sync_playwright().start()"
+```
+
+**Solution 1: Ensure App is Running**
+```bash
+# Start your app first
+cd my-project
+npm start  # or your app's start command
+
+# Then run UX evaluation
+python ux_evaluation.py
+```
+
+**Solution 2: Install Playwright Browsers**
+```bash
+playwright install
+```
+
+**Solution 3: Check App URL**
+```python
+# Make sure URL matches where your app is running
+result = await orchestrator.run_ux_evaluation(
+    app_url="http://localhost:3000"  # Update port if needed
+)
+```
+
+---
+
+### Issue: Checkpoint Not Running at Expected Frequency
+
+**Symptoms:**
+- Checkpoints running too often or too rarely
+- Checkpoint frequency setting not respected
+
+**Diagnosis:**
+```bash
+# Check current frequency setting
+python -m integration.config_ui --show | grep "Frequency"
+
+# Check checkpoint configuration
+python3 -c "
+from checkpoint.config import CheckpointConfig
+config = CheckpointConfig.get_instance()
+print(f'Enabled: {config.enabled}')
+print(f'Frequency: {config.frequency}')
+"
+```
+
+**Solution:**
+
+Set correct frequency:
+```bash
+# Every 5 features
+python -m integration.config_ui --set checkpoint_frequency 5
+
+# Every 20 features
+python -m integration.config_ui --set checkpoint_frequency 20
+```
+
+Or directly in code:
+```python
+from checkpoint.config import CheckpointConfig
+
+config = CheckpointConfig.get_instance()
+config.frequency = 10  # Every 10 features
+```
+
+---
+
+### Issue: Configuration Changes Not Persisting
+
+**Symptoms:**
+- Configuration resets after restart
+- Changes made via CLI don't save
+
+**Diagnosis:**
+```bash
+# Check if config file is writable
+ls -la autocoder_config.yaml
+
+# Check file permissions
+stat autocoder_config.yaml
+```
+
+**Solution:**
+
+Ensure save_config() is called:
+```python
+from integration.config_ui import ConfigurationUI
+
+ui = ConfigurationUI(Path("."))
+ui.config.checkpoint_frequency = 15
+ui.save_config()  # Must call this!
+```
+
+Check file was created:
+```bash
+cat autocoder_config.yaml
+```
+
+---
+
+### Issue: Workflow Result Not Serializable
+
+**Symptoms:**
+- `TypeError: Object of type Path is not JSON serializable`
+- Can't save workflow result to JSON
+
+**Diagnosis:**
+```python
+import json
+result.to_dict()  # Check if this works
+```
+
+**Solution:**
+
+Use `to_dict()` before JSON serialization:
+```python
+import json
+
+# Correct
+result_dict = result.to_dict()
+with open('result.json', 'w') as f:
+    json.dump(result_dict, f, indent=2)
+
+# Incorrect
+# json.dump(result, f)  # Will fail!
+```
+
+---
+
+### Issue: Metrics Not Being Collected
+
+**Symptoms:**
+- No metrics data after workflow
+- Performance report empty
+
+**Diagnosis:**
+```bash
+# Check if metrics enabled
+python -m integration.config_ui --show | grep "Metrics"
+```
+
+**Solution:**
+
+Enable metrics tracking:
+```bash
+python -m integration.config_ui --enable metrics
+```
+
+Or in code:
+```python
+config = WorkflowConfig(
+    enable_metrics=True,
+    track_performance=True
+)
+```
+
+---
+
+## Debugging Complete Workflow
+
+### Enable Verbose Logging
+
+```python
+config = WorkflowConfig(verbose_logging=True)
+```
+
+Or:
+```bash
+python -m integration.config_ui --set verbose_logging true
+```
+
+### Step-by-Step Debugging
+
+Run phases individually instead of complete workflow:
+
+```python
+orchestrator = WorkflowOrchestrator(Path("my-project"), config)
+
+# Test design iteration only
+final_spec = await orchestrator.run_design_iteration("Initial spec...")
+print(f"Design spec: {final_spec}")
+
+# Test development setup only
+success = await orchestrator.run_development_with_checkpoints(features_total=50)
+print(f"Development setup: {success}")
+
+# Test UX evaluation only
+ux_score = await orchestrator.run_ux_evaluation("http://localhost:3000")
+print(f"UX score: {ux_score}")
+```
+
+### Check Intermediate Results
+
+```python
+result = await orchestrator.run_complete_workflow(...)
+
+# Check where it stopped
+print(f"Current phase: {result.current_phase}")
+print(f"Error: {result.error_message}")
+
+# Check what completed
+if result.design_spec_path:
+    print(f"Design completed: {result.design_spec_path}")
+
+if result.features_completed > 0:
+    print(f"Development progress: {result.features_completed}/{result.features_total}")
+
+if result.ux_score:
+    print(f"UX evaluation: {result.ux_score}/10")
+```
+
+---
+
+## Getting Help
+
+### Before Reporting Issues
+
+1. **Check configuration:**
+```bash
+python -m integration.config_ui --show
+```
+
+2. **Check logs:**
+```bash
+# Look for error messages in output
+# Enable verbose logging for more details
+```
+
+3. **Try minimal example:**
+```python
+from pathlib import Path
+from integration.workflow_orchestrator import WorkflowOrchestrator, WorkflowConfig
+
+config = WorkflowConfig(
+    enable_design_iteration=False,
+    enable_ux_evaluation=False,
+    verbose_logging=True
+)
+
+orchestrator = WorkflowOrchestrator(Path("test-project"), config)
+result = await orchestrator.run_development_with_checkpoints(features_total=1)
+print(f"Success: {result}")
+```
+
+4. **Check dependencies:**
+```bash
+pip list | grep -E "claude-agent-sdk|sqlalchemy|fastapi|playwright"
+```
+
+### Reporting Issues
+
+Include:
+- Python version: `python --version`
+- Configuration: `cat autocoder_config.yaml`
+- Error messages (full traceback)
+- Workflow result: `result.to_dict()`
+- What phase failed: `result.current_phase`
+
+Report at: https://github.com/anthropics/autocoder/issues
+
+---
+
+**Document Version:** 2.0 (Updated for Phase 6)
 **Last Updated:** 2026-01-21
 **Feedback:** Please report documentation issues or suggest improvements
