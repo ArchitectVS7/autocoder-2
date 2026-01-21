@@ -240,6 +240,119 @@ class TestDependencyDetection:
             elif dep.detected_method == "keyword_detection":
                 assert dep.confidence >= 0.7
 
+    def test_category_based_dependency_detection(self, db_session):
+        """Test category-based dependency detection."""
+        # Create features with related categories
+        auth_feature = Feature(
+            id=100,
+            name="Authentication System",
+            description="User login and authentication",
+            category="authentication",
+            priority=1.0
+        )
+        authz_feature = Feature(
+            id=101,
+            name="Authorization System",
+            description="User permissions and roles",
+            category="authorization",
+            priority=2.0
+        )
+        db_session.add(auth_feature)
+        db_session.add(authz_feature)
+        db_session.commit()
+
+        detector = DependencyDetector(db_session)
+
+        # Get all features for detection
+        all_features = db_session.query(Feature).all()
+
+        # Detect dependencies for authorization feature
+        deps = detector._detect_categories(authz_feature, all_features)
+
+        # Authorization should depend on authentication
+        assert len(deps) > 0
+        assert any(d["depends_on"] == 100 for d in deps)
+
+        # Check confidence and method
+        auth_dep = next(d for d in deps if d["depends_on"] == 100)
+        assert auth_dep["confidence"] == 0.65
+        assert auth_dep["method"] == "category_based"
+
+    def test_batch_processing_detect_all_dependencies(self, db_session):
+        """Test batch processing of all dependencies."""
+        # Create a set of features with dependencies
+        features = [
+            Feature(id=200, name="Feature A", description="Base feature", category="api", priority=1.0),
+            Feature(id=201, name="Feature B", description="Depends on #200", category="frontend", priority=2.0),
+            Feature(id=202, name="Feature C", description="After Feature B is complete", category="frontend", priority=3.0),
+        ]
+        for f in features:
+            db_session.add(f)
+        db_session.commit()
+
+        detector = DependencyDetector(db_session)
+
+        # Run batch detection
+        total_detected = detector.detect_all_dependencies()
+
+        # Should detect at least 2 dependencies:
+        # - Feature B depends on Feature A (explicit reference)
+        # - Feature C depends on Feature B (keyword detection)
+        # - Feature B and C depend on Feature A (category-based: frontend->api)
+        assert total_detected >= 2
+
+        # Verify dependencies were stored in database
+        deps = db_session.query(FeatureDependency).all()
+        assert len(deps) >= 2
+
+        # Check specific dependencies
+        b_deps = db_session.query(FeatureDependency).filter_by(feature_id=201).all()
+        assert len(b_deps) > 0
+        assert any(d.depends_on_feature_id == 200 for d in b_deps)
+
+    def test_dependency_graph_generation(self, db_session):
+        """Test dependency graph generation with max depth."""
+        # Create a chain of dependencies: A <- B <- C <- D
+        features = [
+            Feature(id=300, name="Feature A", description="Base", category="api", priority=1.0),
+            Feature(id=301, name="Feature B", description="Depends on #300", category="api", priority=2.0),
+            Feature(id=302, name="Feature C", description="Depends on #301", category="api", priority=3.0),
+            Feature(id=303, name="Feature D", description="Depends on #302", category="api", priority=4.0),
+        ]
+        for f in features:
+            db_session.add(f)
+        db_session.commit()
+
+        # Create dependencies
+        deps = [
+            FeatureDependency(feature_id=301, depends_on_feature_id=300, confidence=0.95, detected_method="explicit_id_reference"),
+            FeatureDependency(feature_id=302, depends_on_feature_id=301, confidence=0.95, detected_method="explicit_id_reference"),
+            FeatureDependency(feature_id=303, depends_on_feature_id=302, confidence=0.95, detected_method="explicit_id_reference"),
+        ]
+        for d in deps:
+            db_session.add(d)
+        db_session.commit()
+
+        detector = DependencyDetector(db_session)
+
+        # Get dependency graph with max depth 3
+        graph = detector.get_dependency_graph(300, max_depth=3)
+
+        # Verify structure
+        assert graph["feature_id"] == 300
+        assert graph["feature_name"] == "Feature A"
+        assert "dependents" in graph
+
+        # Should include Feature B as direct dependent
+        assert 301 in graph["dependents"]
+
+        # Test max depth limit - with depth 1, should only get direct dependents
+        graph_depth_1 = detector.get_dependency_graph(300, max_depth=1)
+        assert 301 in graph_depth_1["dependents"]
+        # Feature B's children should be empty due to max_depth=1
+        if 301 in graph_depth_1["dependents"]:
+            assert len(graph_depth_1["dependents"][301]["children"]) == 0
+
 
 class TestSkipImpactAnalysis:
     """Test skip impact analysis."""
@@ -438,6 +551,75 @@ class TestAssumptionsWorkflow:
         assert stats['validated'] >= 1
         assert stats['invalid'] >= 1
         assert 0 <= stats['accuracy_rate'] <= 100
+
+    def test_assumption_prompts_generation(self, db_session, sample_features):
+        """Test generation of ASSUMPTION_DOCUMENTATION_PROMPT and ASSUMPTION_REVIEW_PROMPT."""
+        from tools.assumptions_workflow import ASSUMPTION_DOCUMENTATION_PROMPT, ASSUMPTION_REVIEW_PROMPT
+
+        workflow = AssumptionsWorkflow(db_session)
+
+        # Test ASSUMPTION_DOCUMENTATION_PROMPT
+        # Create a dependency where Feature 12 depends on Feature 5 (which is skipped)
+        dep = FeatureDependency(
+            feature_id=12,
+            depends_on_feature_id=5,
+            confidence=0.85,
+            detected_method="keyword_detection"
+        )
+        db_session.add(dep)
+        db_session.commit()
+
+        # Get the documentation prompt
+        doc_prompt = workflow.get_assumption_documentation_prompt(12)
+
+        # Verify prompt contains necessary information
+        assert doc_prompt != ""
+        assert "Feature #12" in doc_prompt
+        assert "Feature #5" in doc_prompt
+        assert "ASSUMPTION" in doc_prompt.upper()
+        assert "document" in doc_prompt.lower()
+
+        # Test ASSUMPTION_REVIEW_PROMPT
+        # Create some assumptions for Feature 5
+        workflow.create_assumption(
+            feature_id=12,
+            depends_on_feature_id=5,
+            assumption_text="Assumes OAuth returns user email",
+            code_location="auth.js:45-50",
+            impact_description="Email field required for user profile"
+        )
+        workflow.create_assumption(
+            feature_id=23,
+            depends_on_feature_id=5,
+            assumption_text="Assumes OAuth stores refresh token",
+            code_location="api.js:120",
+            impact_description="Token refresh logic depends on this"
+        )
+
+        # Get the review prompt
+        review_prompt = workflow.get_assumption_review_prompt(5)
+
+        # Verify prompt contains necessary information
+        assert review_prompt != ""
+        assert "Feature #5" in review_prompt
+        assert "REVIEW" in review_prompt.upper()
+        assert "OAuth returns user email" in review_prompt
+        assert "OAuth stores refresh token" in review_prompt
+        assert "auth.js:45-50" in review_prompt
+        assert "api.js:120" in review_prompt
+
+        # Verify prompt template structure
+        assert ASSUMPTION_DOCUMENTATION_PROMPT is not None
+        assert "{current_id}" in ASSUMPTION_DOCUMENTATION_PROMPT
+        assert "{current_name}" in ASSUMPTION_DOCUMENTATION_PROMPT
+        assert "{dependency_id}" in ASSUMPTION_DOCUMENTATION_PROMPT
+        assert "{dependency_name}" in ASSUMPTION_DOCUMENTATION_PROMPT
+
+        assert ASSUMPTION_REVIEW_PROMPT is not None
+        assert "{feature_id}" in ASSUMPTION_REVIEW_PROMPT
+        assert "{feature_name}" in ASSUMPTION_REVIEW_PROMPT
+        assert "{count}" in ASSUMPTION_REVIEW_PROMPT
+        assert "{assumptions_list}" in ASSUMPTION_REVIEW_PROMPT
 
 
 class TestHumanInterventionWorkflow:

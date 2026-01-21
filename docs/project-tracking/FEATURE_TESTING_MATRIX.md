@@ -154,12 +154,12 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 |------------|-------------------|---------------|----------------|---------------|-------|
 | **1.2.1** | Explicit ID reference detection (#5, Feature 12) | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_detect_explicit_id_references` | API signature mismatch - needs `all_features` param |
 | **1.2.2** | Keyword-based dependency detection (requires, after, depends on) | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_detect_keyword_dependencies` | API signature mismatch - needs `all_features` param |
-| **1.2.3** | Category-based dependency detection | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
+| **1.2.3** | Category-based dependency detection | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_category_based_dependency_detection` | Tests authorization->authentication dependency |
 | **1.2.4** | Confidence scoring (0.65-0.95) | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_dependency_confidence_scores` | API signature mismatch - needs `all_features` param |
-| **1.2.5** | Batch processing: detect_all_dependencies() | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
-| **1.2.6** | Dependency graph generation (max depth 3) | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
+| **1.2.5** | Batch processing: detect_all_dependencies() | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_batch_processing_detect_all_dependencies` | Tests batch detection and DB storage |
+| **1.2.6** | Dependency graph generation (max depth 3) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestDependencyDetection::test_dependency_graph_generation` | Tests graph with depth limit |
 
-**Task 1.2 Summary:** 6/6 features complete, 0/3 tests passed (3 failed - API mismatch), 3/6 need tests
+**Task 1.2 Summary:** 6/6 features complete, 3/6 tests passed ✅, 3/6 failed (API mismatch)
 
 ---
 
@@ -250,10 +250,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 | **1.8.3** | get_assumptions_for_review() | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestAssumptionsWorkflow::test_get_assumptions_for_review` | Verified in code review |
 | **1.8.4** | validate_assumption() / invalidate_assumption() | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestAssumptionsWorkflow::test_validate_assumption` + `test_invalidate_assumption` | Verified in code review |
 | **1.8.5** | Assumption status tracking (ACTIVE, NEEDS_REVIEW, VALIDATED, INVALID) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestAssumptionsWorkflow::test_assumption_statistics` | Verified in code review |
-| **1.8.6** | Agent prompts generation (ASSUMPTION_DOCUMENTATION_PROMPT, ASSUMPTION_REVIEW_PROMPT) | ✅ `complete` | ⚠️ `written` | N/A | Needs prompt validation test |
+| **1.8.6** | Agent prompts generation (ASSUMPTION_DOCUMENTATION_PROMPT, ASSUMPTION_REVIEW_PROMPT) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestAssumptionsWorkflow::test_assumption_prompts_generation` | Tests both prompts with real data |
 | **1.8.7** | assumptions_cli.py commands (--feature, --show-all, --review, --validate, --invalidate) | ✅ `complete` | ⚠️ `none` | N/A | Needs CLI test |
 
-**Task 1.8 Summary:** 7/7 features complete, 5/7 tests passed, 2/7 need tests
+**Task 1.8 Summary:** 7/7 features complete, 6/7 tests passed ✅, 1/7 needs CLI test
 
 ---
 
@@ -261,10 +261,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 **Total Features:** 45
 **Complete:** 45 (100%)
-**Tests Run:** 39 tests executed
-**Tests Passed:** 38 (97.4%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%) → 38 (97.4%)
-**Tests Failed:** 1 (2.6%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%) → 1 (2.6%)
-**Tests Needed:** Several additional tests for untested features
+**Tests Run:** 43 tests executed (added 4 new tests)
+**Tests Passed:** 42 (97.7%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%) → 36 (92%) → 37 (95%) → 38 (97.4%) → 42 (97.7%)
+**Tests Failed:** 1 (2.3%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%) → 3 (8%) → 2 (5%) → 1 (2.6%) → 1 (2.3%)
+**Tests Needed:** 1 CLI test for assumptions_cli.py
 
 **Phase 3 Regression Testing Improvements (11 tests fixed in total):**
 - ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
@@ -329,11 +329,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 | **2.2.1** | render() generates rich Table | ✅ `complete` | ❌ `failed` | `tests/test_phase2_integration.py::TestPerformanceDashboard::test_render_dashboard` | Test uses str(table) - needs Console().export_text() |
 | **2.2.2** | render_compact() generates rich Panel | ✅ `complete` | ✅ `passed` | `tests/test_phase2_integration.py::TestPerformanceDashboard::test_render_compact` | Test passed ✅ |
 | **2.2.3** | Live updates with 1 Hz refresh | ✅ `complete` | ⚠️ `none` | N/A | Needs interactive test |
-| **2.2.4** | ETA calculation based on velocity | ✅ `complete` | ⚠️ `none` | N/A | Needs dedicated test |
+| **2.2.4** | ETA calculation based on velocity | ✅ `complete` | ✅ `passed` | `tests/test_phase2_integration.py::TestPerformanceDashboard::test_calculate_eta` | Tests ETA calculation and edge cases |
 | **2.2.5** | Quality metrics display (code_quality, test_coverage, accessibility) | ✅ `complete` | ✅ `passed` | `tests/test_phase2_integration.py::TestPerformanceDashboard::test_update_quality_metrics` | Test passed ✅ |
 | **2.2.6** | Status icons (✓, ⚠️, ✗) for targets | ✅ `complete` | ⚠️ `none` | N/A | Needs visual test |
 
-**Task 2.2 Summary:** 6/6 features complete, 2/4 tests passed (1 failed - minor rendering test), 2/6 need tests
+**Task 2.2 Summary:** 6/6 features complete, 3/5 tests passed ✅ (1 failed - minor rendering test), 1 interactive test remains
 
 ---
 
@@ -373,10 +373,10 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 **Total Features:** 28
 **Complete:** 28 (100%)
-**Tests Run:** 22 tests executed
-**Tests Passed:** 21 (95%)
-**Tests Failed:** 1 (5%)
-**Tests Needed:** 6 additional tests for untested features
+**Tests Run:** 23 tests executed (added 1 new test)
+**Tests Passed:** 22 (95.7%)
+**Tests Failed:** 1 (4.3%)
+**Tests Needed:** 5 additional tests for untested features
 
 **Test Results by Category:**
 - ✅ Metrics Collector: 8/8 passed
@@ -866,13 +866,13 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Phase | Features | Complete | % Complete | Tests Passed | Tests Needed |
 |-------|----------|----------|------------|--------------|--------------|
-| **Phase 1** | 45 | 45 | 100% | 38/39 (97%) | 1 (3%) |
-| **Phase 2** | 28 | 28 | 100% | 21/22 (95%) | 1 (5%) |
+| **Phase 1** | 45 | 45 | 100% | 42/43 (98%) ⬆️ | 1 (2%) |
+| **Phase 2** | 28 | 28 | 100% | 22/23 (96%) ⬆️ | 1 (4%) |
 | **Phase 3** | 31 | 31 | 100% | 108/108 (100%) | 0 ✅ |
 | **Phase 4** | 22 | 22 | 100% | 89/89 (100%) | 0 ✅ |
 | **Phase 5** | 31 | 0 | 0% | 0 | 31 |
 | **Phase 6** | 9 | 0 | 0% | 0 | 9 |
-| **TOTAL** | **166** | **126** | **76%** | **256/258 (99%)** | **42 (25%)** |
+| **TOTAL** | **166** | **126** | **76%** | **261/263 (99.2%)** ⬆️ | **42 (25%)** |
 
 ---
 
