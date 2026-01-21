@@ -204,11 +204,11 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 | **1.5.1** | Action 1: Provide Now (collect values, write to .env, resume) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_write_to_env_new_file` | Test passed ✅ |
 | **1.5.2** | Action 2: Defer (add to BLOCKERS.md, skip feature) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_add_to_blockers_md` | Test passed ✅ |
 | **1.5.3** | Action 3: Mock (implement with placeholders) | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_setup_mock_implementation` | Test passed ✅ |
-| **1.5.4** | Interactive CLI prompts with menu | ✅ `complete` | ❌ `failed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_check_for_blockers` | BlockerType enum: 'ENV_CONFIG' not valid |
+| **1.5.4** | Interactive CLI prompts with menu | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_check_for_blockers` | **FIXED:** Updated to use BlockerType.ENV_CONFIG.value |
 | **1.5.5** | Masked input for secrets (getpass) | ✅ `complete` | ⚠️ `none` | N/A | Covered in _collect_values (needs dedicated test) |
 | **1.5.6** | .env file creation with 600 permissions | ✅ `complete` | ✅ `passed` | `tests/test_phase1_integration.py::TestHumanInterventionWorkflow::test_write_to_env_existing_file` | Test passed ✅ |
 
-**Task 1.5 Summary:** 6/6 features complete, 3/5 tests passed (1 failed - enum issue), 1 needs input mocking, 1 needs test
+**Task 1.5 Summary:** 6/6 features complete, 4/5 tests passed ✅ (regression testing during Phase 3), 1 needs input mocking, 1 needs test
 
 ---
 
@@ -262,17 +262,19 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 **Total Features:** 45
 **Complete:** 45 (100%)
 **Tests Run:** 39 tests executed
-**Tests Passed:** 33 (85%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%)
-**Tests Failed:** 6 (15%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%)
+**Tests Passed:** 34 (87%) ⬆️ improved from 28 (72%) → 32 (82%) → 33 (85%) → 34 (87%)
+**Tests Failed:** 5 (13%) ⬇️ reduced from 11 (28%) → 7 (18%) → 6 (15%) → 5 (13%)
 **Tests Needed:** Several additional tests for untested features
 
-**Phase 3 Regression Testing Improvements (5 tests fixed in total):**
+**Phase 3 Regression Testing Improvements (6 tests fixed in total):**
 - ✅ Fixed Task 1.4 blocker classification tests (4 tests, commit #1)
   - Added `classify_blocker_text()` helper method
   - Updated `extract_required_values()` API signature
   - Refined keyword classification to avoid false positives
 - ✅ Fixed Task 1.3 skip impact analysis test (1 test, commit #2)
   - Clarified test to check 'recommendation' field vs 'suggested_action'
+- ✅ Fixed Task 1.5 human intervention test (1 test, commit #3)
+  - Fixed blocker_type enum value usage in test_check_for_blockers
 
 **Test Results by Category:**
 - ✅ Database Schema: 4/4 passed
@@ -280,7 +282,7 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 - ✅ Skip Impact Analysis: 2/2 passed (FIXED during Phase 3 regression testing)
 - ✅ Blocker Classification: 4/4 passed (FIXED during Phase 3 regression testing)
 - ✅ Assumptions Workflow: 6/6 passed
-- ⚠️ Human Intervention: 3/5 passed (enum issue + input mocking)
+- ⚠️ Human Intervention: 4/5 passed (FIXED 1 test during Phase 3, 1 needs input mocking)
 - ✅ Blockers MD Generation: 5/5 passed
 - ✅ Unblock Commands: 6/6 passed
 - ⚠️ End-to-End Workflow: 2/3 passed
@@ -434,11 +436,19 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 
 | Feature ID | Feature Description | Coding Status | Testing Status | Test Location | Notes |
 |------------|-------------------|---------------|----------------|---------------|-------|
-| **3.3.1** | Save reports to checkpoints/ directory | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.3.2** | Markdown format for readability | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
-| **3.3.3** | Database storage for querying | 🔵 `planned` | ⚠️ `none` | N/A | Not started |
+| **3.3.1** | Save reports to checkpoints/ directory | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointReportWriter` | Creates checkpoint_XX_YY_features.md files |
+| **3.3.2** | Markdown format for readability | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointReportWriter` | Comprehensive markdown with sections, emojis, action items |
+| **3.3.3** | Database storage for querying | ✅ `complete` | ✅ `passed` | `tests/test_phase3_checkpoints.py::TestCheckpointDatabaseStorage` | Added Checkpoint model to database.py |
 
-**Task 3.3 Summary:** 0/3 features complete
+**Task 3.3 Summary:** 3/3 features complete (100%), **13 tests passed** ✅
+
+**Implementation Details:**
+- Created `checkpoint_report_writer.py` with CheckpointReportWriter class
+- Markdown generation with decision emojis, severity-grouped issues, action items
+- Reports saved as checkpoint_<number>_<features>_features.md
+- Helper methods: list_checkpoints(), get_latest_checkpoint_path(), read_checkpoint()
+- Added Checkpoint model to database schema with full result JSON storage
+- Database storage optional (graceful fallback if not available)
 
 ---
 
@@ -500,13 +510,13 @@ Phase 0 addresses the "passion and creativity" gap in the coding agent by adding
 ## Phase 3 Summary
 
 **Total Features:** 31
-**Complete:** 9/31 (29%) - Tasks 3.1 and 3.2 complete
-**Tests:** 38/38 passed (100%)
+**Complete:** 12/31 (39%) - Tasks 3.1, 3.2, and 3.3 complete
+**Tests:** 51/51 passed (100%)
 
 **Status:**
 - ✅ Task 3.1: Checkpoint Configuration System (5/5 features, 25 tests)
 - ✅ Task 3.2: Checkpoint Orchestration Engine (4/4 features, 13 tests)
-- 🔵 Task 3.3: Checkpoint Report Storage (0/3 features)
+- ✅ Task 3.3: Checkpoint Report Storage (3/3 features, 13 tests)
 - 🔵 Task 3.4-3.7: Checkpoint Agents (0/19 features)
 
 ---

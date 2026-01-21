@@ -450,7 +450,7 @@ class TestHumanInterventionWorkflow:
         # Create a blocker
         blocker = FeatureBlocker(
             feature_id=5,
-            blocker_type="ENV_CONFIG",
+            blocker_type=BlockerType.ENV_CONFIG.value,  # "environment_config"
             blocker_description="Missing OAUTH_CLIENT_ID",
             required_values=["OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"],
             status="ACTIVE"

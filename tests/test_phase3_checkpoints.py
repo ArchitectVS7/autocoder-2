@@ -22,6 +22,17 @@ from checkpoint_config import (
     set_config,
     reset_config
 )
+from checkpoint_orchestrator import (
+    CheckpointOrchestrator,
+    CheckpointDecision,
+    CheckpointResult,
+    CheckpointIssue,
+    IssueSeverity,
+    AggregatedCheckpointResult,
+    run_checkpoint_if_needed
+)
+from checkpoint_report_writer import CheckpointReportWriter
+from datetime import datetime as dt
 
 
 @pytest.fixture
@@ -514,16 +525,6 @@ verbose_logging: true
 # Task 3.2: Checkpoint Orchestration Engine
 # =============================================================================
 
-import asyncio
-from checkpoint_orchestrator import (
-    CheckpointOrchestrator,
-    CheckpointDecision,
-    CheckpointResult,
-    CheckpointIssue,
-    IssueSeverity,
-    run_checkpoint_if_needed
-)
-
 
 class TestCheckpointOrchestrator:
     """Test checkpoint orchestration engine."""
@@ -829,3 +830,339 @@ class TestCheckpointCounter:
         assert result1.checkpoint_number == 1
         assert result2.checkpoint_number == 2
         assert result3.checkpoint_number == 3
+
+
+# =============================================================================
+# Task 3.3: Checkpoint Report Storage
+# =============================================================================
+
+
+class TestCheckpointReportWriter:
+    """Test checkpoint report writing to disk."""
+
+    def test_save_report_creates_markdown_file(self, temp_project_dir):
+        """Should create markdown file in checkpoints/ directory."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        # Create a sample result
+        result = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE,
+            results=[],
+            total_critical=0,
+            total_warnings=0,
+            total_info=0,
+            total_execution_time_ms=100.0
+        )
+
+        filepath = writer.save_report(result)
+
+        assert filepath.exists()
+        assert filepath.parent.name == "checkpoints"
+        assert filepath.name == "checkpoint_01_10_features.md"
+
+    def test_generate_filename_format(self, temp_project_dir):
+        """Should generate correctly formatted filenames."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result1 = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE
+        )
+
+        result2 = AggregatedCheckpointResult(
+            checkpoint_number=15,
+            features_completed=150,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE
+        )
+
+        assert writer._generate_filename(result1) == "checkpoint_01_10_features.md"
+        assert writer._generate_filename(result2) == "checkpoint_15_150_features.md"
+
+    def test_markdown_includes_all_sections(self, temp_project_dir):
+        """Should include all required sections in markdown."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE_WITH_WARNINGS,
+            results=[
+                CheckpointResult(
+                    checkpoint_type='code_review',
+                    status='PASS_WITH_WARNINGS',
+                    issues=[
+                        CheckpointIssue(
+                            severity=IssueSeverity.WARNING,
+                            checkpoint_type='code_review',
+                            title='Test Warning',
+                            description='This is a test warning',
+                            location='test.py',
+                            line_number=42,
+                            suggestion='Fix this'
+                        )
+                    ],
+                    execution_time_ms=50.0
+                )
+            ],
+            total_critical=0,
+            total_warnings=1,
+            total_info=0,
+            total_execution_time_ms=100.0
+        )
+
+        markdown = writer._generate_markdown(result, "Test Feature")
+
+        # Check for key sections
+        assert "# Checkpoint #1" in markdown
+        assert "**Features Completed:** 10" in markdown
+        assert "**Last Feature:** Test Feature" in markdown
+        assert "## Decision:" in markdown
+        assert "CONTINUE_WITH_WARNINGS" in markdown
+        assert "## Summary" in markdown
+        assert "**Critical Issues:** 0" in markdown
+        assert "**Warnings:** 1" in markdown
+        assert "## Checkpoint Results" in markdown
+        assert "### ⚠️ code_review" in markdown
+        assert "##### 🟡 Warnings" in markdown
+        assert "**Test Warning**" in markdown
+        assert "This is a test warning" in markdown
+        assert "*Location:* `test.py`" in markdown
+        assert "(Line 42)" in markdown
+        assert "*Suggestion:* Fix this" in markdown
+
+    def test_markdown_pause_decision_includes_action_required(self, temp_project_dir):
+        """Should include action required section for PAUSE decision."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.PAUSE,
+            total_critical=1
+        )
+
+        markdown = writer._generate_markdown(result)
+
+        assert "## ⚠️ Action Required" in markdown
+        assert "Development has been **paused**" in markdown
+        assert "**Next Steps:**" in markdown
+
+    def test_list_checkpoints_sorted(self, temp_project_dir):
+        """Should list checkpoints sorted by number."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        # Create multiple checkpoints
+        for i in [3, 1, 2]:
+            result = AggregatedCheckpointResult(
+                checkpoint_number=i,
+                features_completed=i * 10,
+                timestamp=dt.now(),
+                decision=CheckpointDecision.CONTINUE
+            )
+            writer.save_report(result)
+
+        checkpoints = writer.list_checkpoints()
+
+        assert len(checkpoints) == 3
+        # Should be sorted by checkpoint number
+        assert "checkpoint_01" in checkpoints[0].name
+        assert "checkpoint_02" in checkpoints[1].name
+        assert "checkpoint_03" in checkpoints[2].name
+
+    def test_get_latest_checkpoint(self, temp_project_dir):
+        """Should return most recently created checkpoint."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        # Create checkpoints with delays
+        import time
+
+        result1 = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE
+        )
+        writer.save_report(result1)
+
+        time.sleep(0.01)
+
+        result2 = AggregatedCheckpointResult(
+            checkpoint_number=2,
+            features_completed=20,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE
+        )
+        writer.save_report(result2)
+
+        latest = writer.get_latest_checkpoint_path()
+
+        assert latest is not None
+        assert "checkpoint_02" in latest.name
+
+    def test_get_latest_checkpoint_when_none_exist(self, temp_project_dir):
+        """Should return None when no checkpoints exist."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        latest = writer.get_latest_checkpoint_path()
+
+        assert latest is None
+
+    def test_read_checkpoint(self, temp_project_dir):
+        """Should read checkpoint by number."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result = AggregatedCheckpointResult(
+            checkpoint_number=5,
+            features_completed=50,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE
+        )
+        writer.save_report(result, feature_name="Auth System")
+
+        content = writer.read_checkpoint(5)
+
+        assert content is not None
+        assert "# Checkpoint #5" in content
+        assert "**Features Completed:** 50" in content
+        assert "**Last Feature:** Auth System" in content
+
+    def test_read_nonexistent_checkpoint(self, temp_project_dir):
+        """Should return None for nonexistent checkpoint."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        content = writer.read_checkpoint(999)
+
+        assert content is None
+
+    def test_markdown_with_critical_issues(self, temp_project_dir):
+        """Should properly format critical issues."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.PAUSE,
+            results=[
+                CheckpointResult(
+                    checkpoint_type='security_audit',
+                    status='FAIL',
+                    issues=[
+                        CheckpointIssue(
+                            severity=IssueSeverity.CRITICAL,
+                            checkpoint_type='security_audit',
+                            title='SQL Injection Vulnerability',
+                            description='Unescaped user input in query',
+                            location='api/users.py',
+                            line_number=145,
+                            suggestion='Use parameterized queries'
+                        )
+                    ]
+                )
+            ],
+            total_critical=1
+        )
+
+        markdown = writer._generate_markdown(result)
+
+        assert "##### 🔴 Critical Issues" in markdown
+        assert "**SQL Injection Vulnerability**" in markdown
+        assert "Unescaped user input in query" in markdown
+        assert "*Location:* `api/users.py`" in markdown
+        assert "(Line 145)" in markdown
+        assert "*Suggestion:* Use parameterized queries" in markdown
+
+    def test_markdown_with_info_issues(self, temp_project_dir):
+        """Should properly format info items."""
+        writer = CheckpointReportWriter(temp_project_dir)
+
+        result = AggregatedCheckpointResult(
+            checkpoint_number=1,
+            features_completed=10,
+            timestamp=dt.now(),
+            decision=CheckpointDecision.CONTINUE,
+            results=[
+                CheckpointResult(
+                    checkpoint_type='code_review',
+                    status='PASS',
+                    issues=[
+                        CheckpointIssue(
+                            severity=IssueSeverity.INFO,
+                            checkpoint_type='code_review',
+                            title='Good naming conventions',
+                            description='All variables follow snake_case'
+                        )
+                    ]
+                )
+            ],
+            total_info=1
+        )
+
+        markdown = writer._generate_markdown(result)
+
+        assert "##### 🔵 Informational" in markdown
+        assert "**Good naming conventions**: All variables follow snake_case" in markdown
+
+
+class TestCheckpointDatabaseStorage:
+    """Test database storage for checkpoints."""
+
+    def test_checkpoint_model_to_dict(self):
+        """Should convert Checkpoint model to dictionary."""
+        from api.database import Checkpoint
+
+        checkpoint = Checkpoint(
+            id=1,
+            checkpoint_number=5,
+            features_completed=50,
+            timestamp=dt(2026, 1, 21, 12, 0, 0),
+            decision="CONTINUE",
+            total_critical=0,
+            total_warnings=2,
+            total_info=1,
+            execution_time_ms=500.0,
+            report_filepath="/path/to/report.md",
+            result_json={"test": "data"}
+        )
+
+        result_dict = checkpoint.to_dict()
+
+        assert result_dict["checkpoint_number"] == 5
+        assert result_dict["features_completed"] == 50
+        assert result_dict["decision"] == "CONTINUE"
+        assert result_dict["total_warnings"] == 2
+        assert result_dict["execution_time_ms"] == 500.0
+        assert result_dict["report_filepath"] == "/path/to/report.md"
+
+
+class TestCheckpointReportIntegration:
+    """Integration tests for checkpoint report system."""
+
+    @pytest.mark.asyncio
+    async def test_complete_checkpoint_workflow_with_report(self, temp_project_dir):
+        """Should run checkpoint and save report."""
+        config = AutocoderConfig(
+            checkpoints=CheckpointConfig(enabled=True, frequency=10)
+        )
+
+        orchestrator = CheckpointOrchestrator(temp_project_dir, config)
+        result = await orchestrator.run_checkpoint(features_completed=10)
+
+        # Save report
+        writer = CheckpointReportWriter(temp_project_dir)
+        filepath = writer.save_report(result, feature_name="Test Feature")
+
+        # Verify file exists and contains expected content
+        assert filepath.exists()
+        content = filepath.read_text()
+        assert "# Checkpoint #1" in content
+        assert "**Features Completed:** 10" in content
+        assert "**Last Feature:** Test Feature" in content
