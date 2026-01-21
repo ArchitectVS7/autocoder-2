@@ -275,3 +275,203 @@ def copy_spec_to_project(project_dir: Path) -> None:
             return
 
     print("Warning: No app_spec.txt found to copy to project directory")
+
+
+# =============================================================================
+# PHASE 0: PERSONA SWITCHING - Context-Aware Prompt Enhancement
+# =============================================================================
+
+def detect_feature_type(feature: dict) -> str:
+    """
+    Detect feature type from category, name, and description keywords.
+
+    This enables context-appropriate persona selection without requiring
+    explicit feature type annotation. The detection uses keyword matching
+    across multiple feature fields.
+
+    Args:
+        feature: Feature dict with keys: 'category', 'name', 'description'
+                 At minimum, 'name' and 'description' should be present.
+
+    Returns:
+        One of: "security", "ui_ux", "api", "data", "performance", "standard"
+
+    Classification Strategy:
+        - security: Authentication, authorization, encryption, tokens, payments
+        - ui_ux: User interface, accessibility, design, responsive layouts
+        - api: Backend endpoints, database operations, server logic
+        - data: Import/export, validation, transformation, processing
+        - performance: Optimization, caching, speed, efficiency
+        - standard: Default (no special persona needed)
+
+    Examples:
+        >>> detect_feature_type({
+        ...     'category': 'Authentication',
+        ...     'name': 'User login with OAuth',
+        ...     'description': 'Implement OAuth authentication flow'
+        ... })
+        'security'
+
+        >>> detect_feature_type({
+        ...     'category': 'UI',
+        ...     'name': 'Responsive navigation menu',
+        ...     'description': 'Build accessible navigation with keyboard support'
+        ... })
+        'ui_ux'
+    """
+    # Combine all text fields for analysis (lowercase for case-insensitive matching)
+    text_parts = [
+        feature.get('category', ''),
+        feature.get('name', ''),
+        feature.get('description', ''),
+    ]
+    text = ' '.join(str(part) for part in text_parts if part).lower()
+
+    # Split into words for whole-word matching (avoid substring false positives)
+    # e.g., "form" should not match "transformation"
+    words = set(text.lower().replace(',', ' ').replace('.', ' ').split())
+
+    # Security-sensitive features (highest priority - security is critical)
+    security_keywords = {
+        'auth', 'login', 'password', 'token', 'security', 'oauth',
+        'jwt', 'session', 'permission', 'role', 'encrypt', 'payment',
+        'credential', 'secret', 'authorization', 'authentication',
+        'stripe', 'paypal', 'billing', '2fa', 'mfa',
+        'hash', 'salt', 'https', 'ssl', 'tls', 'certificate',
+    }
+    # Also check multi-word phrases in original text
+    if 'api key' in text or 'credit card' in text:
+        return "security"
+    if words & security_keywords:  # Set intersection for word matching
+        return "security"
+
+    # UI/UX focused features
+    ui_ux_keywords = {
+        'ui', 'ux', 'design', 'layout', 'accessibility', 'responsive',
+        'button', 'form', 'modal', 'component', 'style', 'theme',
+        'navigation', 'menu', 'dashboard', 'display', 'interface',
+        'frontend', 'react', 'vue', 'angular', 'tailwind', 'css',
+        'wcag', 'aria', 'keyboard', 'mobile',
+        'tablet', 'desktop', 'breakpoint', 'animation', 'transition',
+    }
+    # Also check multi-word phrases
+    if 'screen reader' in text:
+        return "ui_ux"
+    if words & ui_ux_keywords:
+        return "ui_ux"
+
+    # API/Backend features
+    api_keywords = {
+        'api', 'endpoint', 'route', 'controller', 'service',
+        'database', 'query', 'migration', 'schema', 'model',
+        'backend', 'server', 'rest', 'graphql', 'http',
+        'post', 'get', 'put', 'delete', 'patch',
+        'crud', 'orm', 'sql', 'postgresql', 'mysql',
+        'mongodb', 'redis', 'cache', 'queue',
+    }
+    if words & api_keywords:
+        return "api"
+
+    # Data processing features
+    data_keywords = {
+        'data', 'export', 'import', 'csv', 'json', 'parse',
+        'transform', 'validate', 'format', 'report', 'analytics',
+        'etl', 'pipeline', 'batch', 'process', 'aggregate',
+        'xml', 'yaml', 'excel', 'spreadsheet', 'file',
+    }
+    if words & data_keywords:
+        return "data"
+
+    # Performance features
+    performance_keywords = {
+        'performance', 'optimize', 'speed', 'efficient', 'fast', 'slow',
+        'memory', 'cpu', 'latency', 'throughput', 'tuning',
+    }
+    # Multi-word phrases for performance
+    if 'lazy load' in text:
+        return "performance"
+    if words & performance_keywords:
+        return "performance"
+
+    # Default: standard (no special persona)
+    return "standard"
+
+
+def get_coding_prompt_with_persona(feature: dict, project_dir: Path | None = None) -> str:
+    """
+    Get coding prompt enhanced with appropriate persona based on feature type.
+
+    This is the Phase 0 enhancement that brings context-appropriate expertise
+    to the coding agent without requiring multi-agent orchestration.
+
+    The function:
+    1. Loads the base coding prompt (project-specific or template)
+    2. Detects the feature type from keywords
+    3. Appends the appropriate persona instructions
+    4. Always appends the craftsmanship mindset
+
+    Args:
+        feature: Feature dict with at least 'name' and 'description' keys
+        project_dir: Optional project directory for project-specific prompts
+
+    Returns:
+        Enhanced prompt with persona add-on(s) appended
+
+    Persona Selection:
+        - security features → SECURITY_PERSONA (paranoid, OWASP-focused)
+        - ui_ux features → UX_PERSONA (accessibility, WCAG, responsive)
+        - api features → API_PERSONA (performance, error handling, validation)
+        - data features → DATA_PERSONA (validation, encoding, large datasets)
+        - performance features → (no special persona yet, just craftsmanship)
+        - standard features → (no special persona, just craftsmanship)
+
+    Note:
+        CRAFTSMANSHIP_MINDSET is ALWAYS appended to encourage initiative
+        and quality beyond minimum requirements.
+
+    Examples:
+        >>> feature = {
+        ...     'id': 5,
+        ...     'name': 'User login with JWT tokens',
+        ...     'description': 'Implement secure authentication'
+        ... }
+        >>> prompt = get_coding_prompt_with_persona(feature)
+        # Returns base prompt + SECURITY_PERSONA + CRAFTSMANSHIP_MINDSET
+    """
+    from persona_prompts import (
+        SECURITY_PERSONA,
+        UX_PERSONA,
+        API_PERSONA,
+        DATA_PERSONA,
+        CRAFTSMANSHIP_MINDSET,
+    )
+
+    # Load base coding prompt (project-specific if available)
+    base_prompt = get_coding_prompt(project_dir)
+
+    # Detect feature type
+    feature_type = detect_feature_type(feature)
+
+    # Select appropriate persona add-on
+    persona_addon = ""
+    if feature_type == "security":
+        persona_addon = SECURITY_PERSONA
+    elif feature_type == "ui_ux":
+        persona_addon = UX_PERSONA
+    elif feature_type == "api":
+        persona_addon = API_PERSONA
+    elif feature_type == "data":
+        persona_addon = DATA_PERSONA
+    # performance and standard get no special persona (craftsmanship only)
+
+    # Build enhanced prompt
+    enhanced_prompt = base_prompt
+
+    # Add persona-specific expertise if applicable
+    if persona_addon:
+        enhanced_prompt = enhanced_prompt + "\n" + persona_addon
+
+    # ALWAYS add craftsmanship mindset (applies to all features)
+    enhanced_prompt = enhanced_prompt + "\n" + CRAFTSMANSHIP_MINDSET
+
+    return enhanced_prompt
