@@ -221,7 +221,7 @@ def cmd_show_dependencies(project_dir: Path, feature_id: int) -> bool:
     Returns:
         True if successful
     """
-    from dependency_detector import DependencyDetector
+    from tools.dependency_detector import DependencyDetector
 
     engine, SessionLocal = create_database(project_dir)
     db = SessionLocal()
