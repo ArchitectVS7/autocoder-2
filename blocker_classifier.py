@@ -32,12 +32,11 @@ class BlockerClassifier:
         BlockerType.ENV_CONFIG: [
             "environment variable",
             "env var",
-            "api key",
+            "missing env",
             "secret",
             "credentials",
             "config",
             "missing .env",
-            "need to set",
             "configuration",
             "CLIENT_ID",
             "API_KEY",
@@ -54,6 +53,8 @@ class BlockerClassifier:
             "need account",
             "sign up for",
             "service not configured",
+            "set up account",
+            "api key",  # When combined with service names, indicates external service setup
         ],
         BlockerType.TECH_PREREQUISITE: [
             "depends on",
@@ -139,6 +140,34 @@ class BlockerClassifier:
         # Default to unclear requirements if no match
         return BlockerType.UNCLEAR_REQUIREMENTS
 
+    def classify_blocker_text(self, skip_reason: str) -> BlockerType:
+        """
+        Classify a blocker type based on skip reason text only.
+
+        This is a convenience method for testing and simple classification
+        without requiring a full Feature object.
+
+        Args:
+            skip_reason: Reason text for skipping
+
+        Returns:
+            BlockerType enum value
+        """
+        # Use the main classification logic with just the text
+        skip_reason_lower = skip_reason.lower()
+        scores = {}
+
+        for blocker_type, keywords in self.BLOCKER_INDICATORS.items():
+            score = sum(1 for keyword in keywords if keyword.lower() in skip_reason_lower)
+            scores[blocker_type] = score
+
+        # Return the highest scoring type
+        if max(scores.values()) > 0:
+            return max(scores.items(), key=lambda x: x[1])[0]
+
+        # Default to unclear requirements if no match
+        return BlockerType.UNCLEAR_REQUIREMENTS
+
     def requires_human_intervention(self, blocker_type: BlockerType) -> bool:
         """
         Check if a blocker type requires human input.
@@ -196,20 +225,25 @@ class BlockerClassifier:
         return blocker
 
     def extract_required_values(
-        self, blocker_type: BlockerType, description: str
+        self, description: str, blocker_type: Optional[BlockerType] = None
     ) -> Optional[List[str]]:
         """
         Extract required values from blocker description.
 
         For ENV_CONFIG blockers, tries to extract environment variable names.
+        If blocker_type is not provided, will auto-detect from description.
 
         Args:
-            blocker_type: Type of blocker
             description: Blocker description
+            blocker_type: Optional type of blocker (auto-detected if None)
 
         Returns:
             List of required values or None
         """
+        # Auto-detect blocker type if not provided
+        if blocker_type is None:
+            blocker_type = self.classify_blocker_text(description)
+
         if blocker_type != BlockerType.ENV_CONFIG:
             return None
 
@@ -394,7 +428,7 @@ def classify_and_create_blocker(
         blocker_type = classifier.classify_blocker(feature, skip_reason, agent_classification)
 
         # Extract required values if applicable
-        required_values = classifier.extract_required_values(blocker_type, skip_reason)
+        required_values = classifier.extract_required_values(skip_reason, blocker_type)
 
         # Create blocker record
         blocker = classifier.create_blocker(

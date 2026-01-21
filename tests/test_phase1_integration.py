@@ -77,7 +77,7 @@ def sample_features(db_session):
             passes=False,
             was_skipped=True,
             skip_count=1,
-            blocker_type="ENV_CONFIG",
+            blocker_type=BlockerType.ENV_CONFIG.value,  # "environment_config"
             blocker_description="Missing OAUTH_CLIENT_ID and OAUTH_CLIENT_SECRET"
         ),
         Feature(
@@ -120,7 +120,7 @@ class TestDatabaseSchema:
             steps=["Step 1"],
             was_skipped=True,
             skip_count=2,
-            blocker_type="ENV_CONFIG",
+            blocker_type=BlockerType.ENV_CONFIG.value,  # "environment_config"
             blocker_description="Test blocker",
             is_blocked=True,
             passing_with_mocks=True
