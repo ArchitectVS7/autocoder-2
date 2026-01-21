@@ -12,7 +12,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from api.database import Feature, FeatureBlocker
-from blocker_classifier import BlockerType
+from tools.blocker_classifier import BlockerType
 
 
 class BlockersMdGenerator:
