@@ -205,7 +205,7 @@ class HumanInterventionHandler:
         Returns:
             True if successful
         """
-        from blockers_md_generator import BlockersMdGenerator
+        from tools.blockers_md_generator import BlockersMdGenerator
 
         generator = BlockersMdGenerator(self.db)
         generator.update(self.project_dir)

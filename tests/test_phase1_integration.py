@@ -248,14 +248,16 @@ class TestDependencyDetection:
             name="Authentication System",
             description="User login and authentication",
             category="authentication",
-            priority=1.0
+            priority=1.0,
+            steps=[]
         )
         authz_feature = Feature(
             id=101,
             name="Authorization System",
             description="User permissions and roles",
             category="authorization",
-            priority=2.0
+            priority=2.0,
+            steps=[]
         )
         db_session.add(auth_feature)
         db_session.add(authz_feature)
@@ -282,9 +284,9 @@ class TestDependencyDetection:
         """Test batch processing of all dependencies."""
         # Create a set of features with dependencies
         features = [
-            Feature(id=200, name="Feature A", description="Base feature", category="api", priority=1.0),
-            Feature(id=201, name="Feature B", description="Depends on #200", category="frontend", priority=2.0),
-            Feature(id=202, name="Feature C", description="After Feature B is complete", category="frontend", priority=3.0),
+            Feature(id=200, name="Feature A", description="Base feature", category="api", priority=1.0, steps=[]),
+            Feature(id=201, name="Feature B", description="Depends on #200", category="frontend", priority=2.0, steps=[]),
+            Feature(id=202, name="Feature C", description="After Feature B is complete", category="frontend", priority=3.0, steps=[]),
         ]
         for f in features:
             db_session.add(f)
@@ -314,10 +316,10 @@ class TestDependencyDetection:
         """Test dependency graph generation with max depth."""
         # Create a chain of dependencies: A <- B <- C <- D
         features = [
-            Feature(id=300, name="Feature A", description="Base", category="api", priority=1.0),
-            Feature(id=301, name="Feature B", description="Depends on #300", category="api", priority=2.0),
-            Feature(id=302, name="Feature C", description="Depends on #301", category="api", priority=3.0),
-            Feature(id=303, name="Feature D", description="Depends on #302", category="api", priority=4.0),
+            Feature(id=300, name="Feature A", description="Base", category="api", priority=1.0, steps=[]),
+            Feature(id=301, name="Feature B", description="Depends on #300", category="api", priority=2.0, steps=[]),
+            Feature(id=302, name="Feature C", description="Depends on #301", category="api", priority=3.0, steps=[]),
+            Feature(id=303, name="Feature D", description="Depends on #302", category="api", priority=4.0, steps=[]),
         ]
         for f in features:
             db_session.add(f)
@@ -912,7 +914,7 @@ class TestUnblockCommands:
 
     def test_cmd_unblock(self, db_session, sample_features, temp_project_dir):
         """Test unblocking a specific feature."""
-        from blockers_cli import cmd_unblock
+        from tools.blockers_cli import cmd_unblock
 
         # Create a blocked feature with blocker
         feature = db_session.query(Feature).filter_by(id=5).first()
@@ -947,7 +949,7 @@ class TestUnblockCommands:
 
     def test_cmd_unblock_nonexistent_feature(self, db_session, temp_project_dir):
         """Test unblocking a feature that doesn't exist."""
-        from blockers_cli import cmd_unblock
+        from tools.blockers_cli import cmd_unblock
 
         result = cmd_unblock(temp_project_dir, 9999)
 
@@ -955,7 +957,7 @@ class TestUnblockCommands:
 
     def test_cmd_unblock_all(self, db_session, sample_features, temp_project_dir):
         """Test unblocking all blocked features."""
-        from blockers_cli import cmd_unblock_all
+        from tools.blockers_cli import cmd_unblock_all
 
         # Block multiple features
         features = db_session.query(Feature).filter(Feature.id.in_([5, 12])).all()
@@ -986,7 +988,7 @@ class TestUnblockCommands:
 
     def test_cmd_unblock_all_no_blockers(self, db_session, temp_project_dir):
         """Test unblock-all when there are no blocked features."""
-        from blockers_cli import cmd_unblock_all
+        from tools.blockers_cli import cmd_unblock_all
 
         result = cmd_unblock_all(temp_project_dir)
 
@@ -994,7 +996,7 @@ class TestUnblockCommands:
 
     def test_cmd_show_blockers(self, db_session, sample_features, temp_project_dir):
         """Test showing active blockers."""
-        from blockers_cli import cmd_show_blockers
+        from tools.blockers_cli import cmd_show_blockers
 
         # Create some blockers
         blocker = FeatureBlocker(
@@ -1014,7 +1016,7 @@ class TestUnblockCommands:
 
     def test_cmd_show_dependencies(self, db_session, sample_features, temp_project_dir):
         """Test showing dependencies for a feature."""
-        from blockers_cli import cmd_show_dependencies
+        from tools.blockers_cli import cmd_show_dependencies
         from dependency_detector import DependencyDetector
 
         # First detect dependencies
