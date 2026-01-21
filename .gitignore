@@ -70,6 +70,10 @@ coverage.xml
 .pytest_cache/
 nosetests.xml
 
+# Test artifacts
+test_*_project/
+tests/unit/features.db
+
 # mypy
 .mypy_cache/
 .dmypy.json
