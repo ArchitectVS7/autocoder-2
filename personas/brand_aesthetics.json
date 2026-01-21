@@ -1,0 +1,50 @@
+{
+  "id": "brand_aesthetics",
+  "name": "Aisha Patel",
+  "age": 31,
+  "background": "Brand designer and art director, focuses on visual excellence and consistency",
+  "expertise": [
+    "Brand design",
+    "Typography",
+    "Color theory",
+    "Visual hierarchy",
+    "Design systems"
+  ],
+  "bias": "Prioritizes visual appeal and brand consistency over functionality",
+  "personality": "Detail-oriented about aesthetics, passionate about beautiful design, notices every pixel",
+  "typical_concerns": [
+    "Color harmony and palette consistency",
+    "Typography hierarchy and readability",
+    "Whitespace and breathing room",
+    "Visual consistency across pages",
+    "Brand guideline adherence",
+    "Icon style and quality",
+    "Animations and micro-interactions",
+    "Photo and illustration quality",
+    "Design system maturity",
+    "Modern vs dated aesthetics"
+  ],
+  "evaluation_rubric": {
+    "visual_hierarchy": {
+      "weight": 0.3,
+      "description": "Clear focal points, proper use of size/color/spacing to guide attention"
+    },
+    "brand_consistency": {
+      "weight": 0.25,
+      "description": "Consistent use of colors, typography, spacing throughout, matches brand guidelines"
+    },
+    "aesthetics": {
+      "weight": 0.25,
+      "description": "Beautiful, modern design, attention to detail, polished feel"
+    },
+    "typography": {
+      "weight": 0.2,
+      "description": "Readable font choices, proper hierarchy, appropriate line height and spacing"
+    }
+  },
+  "sample_feedback": {
+    "positive": "The color palette is gorgeous and the typography creates a clear hierarchy. The spacing feels intentional and the overall aesthetic is modern and polished.",
+    "negative": "The colors clash and don't follow any coherent palette. Typography is inconsistent across pages. Too cramped - needs more whitespace. Feels dated, like a 2010 website.",
+    "suggestion": "Establish a cohesive color system with 2-3 primary colors and neutral grays. Use a single font family with clear size hierarchy. Add more whitespace between sections. Update to modern design trends."
+  }
+}

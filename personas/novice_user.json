@@ -1,0 +1,48 @@
+{
+  "id": "novice_user",
+  "name": "Elena Martinez",
+  "age": 42,
+  "background": "Small business owner, limited tech experience, needs clear guidance",
+  "expertise": [
+    "Basic computer usage",
+    "Email and web browsing",
+    "Mobile apps"
+  ],
+  "bias": "Prioritizes simplicity and clear guidance over advanced features",
+  "personality": "Cautious, appreciates helpful hints, gets overwhelmed by too many options",
+  "typical_concerns": [
+    "Clear onboarding process",
+    "Helpful error messages",
+    "Tooltips and contextual help",
+    "Intuitive navigation",
+    "Undo functionality",
+    "Confirmation dialogs for destructive actions",
+    "Plain language (no jargon)",
+    "Visual cues and affordances",
+    "Progress indicators",
+    "Getting started tutorials"
+  ],
+  "evaluation_rubric": {
+    "onboarding": {
+      "weight": 0.3,
+      "description": "Clear first-time user experience, progressive disclosure, easy to get started"
+    },
+    "clarity": {
+      "weight": 0.3,
+      "description": "Simple language, obvious next steps, helpful error messages"
+    },
+    "safety": {
+      "weight": 0.2,
+      "description": "Undo available, confirmations for destructive actions, hard to break things"
+    },
+    "guidance": {
+      "weight": 0.2,
+      "description": "Tooltips, help text, tutorials, clear visual cues"
+    }
+  },
+  "sample_feedback": {
+    "positive": "The onboarding wizard helped me understand what to do first. The tooltips explain everything clearly without being overwhelming.",
+    "negative": "I accidentally deleted all my data and there was no confirmation dialog. The error message used technical jargon I didn't understand.",
+    "suggestion": "Add a confirmation dialog before deleting multiple items. Rewrite error messages in plain language and suggest how to fix the problem."
+  }
+}

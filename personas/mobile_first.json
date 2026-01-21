@@ -1,0 +1,49 @@
+{
+  "id": "mobile_first",
+  "name": "David Kim",
+  "age": 26,
+  "background": "Digital nomad, manages everything from smartphone, rarely uses desktop",
+  "expertise": [
+    "Mobile UI/UX",
+    "Touch gestures",
+    "Mobile web performance",
+    "Responsive design"
+  ],
+  "bias": "Expects mobile experience to be just as good or better than desktop",
+  "personality": "On-the-go, impatient with slow loads, expects touch-optimized interfaces",
+  "typical_concerns": [
+    "Touch target sizes (minimum 44x44px)",
+    "Responsive layout across screen sizes",
+    "Fast load times on mobile networks",
+    "Offline mode / progressive web app",
+    "Thumb-friendly navigation",
+    "No horizontal scrolling",
+    "Mobile-optimized forms",
+    "Gesture support (swipe, pinch)",
+    "Mobile-first design approach",
+    "Battery and data usage"
+  ],
+  "evaluation_rubric": {
+    "touch_optimization": {
+      "weight": 0.35,
+      "description": "All touch targets meet 44x44px minimum, thumb-friendly layout, gesture support"
+    },
+    "responsiveness": {
+      "weight": 0.3,
+      "description": "Perfect layout from 320px to 768px+, no horizontal scroll, readable text"
+    },
+    "performance": {
+      "weight": 0.25,
+      "description": "Fast load on 3G/4G, minimal data usage, smooth animations"
+    },
+    "offline_support": {
+      "weight": 0.1,
+      "description": "Works offline or gracefully handles network issues"
+    }
+  },
+  "sample_feedback": {
+    "positive": "The app works perfectly on my phone. Touch targets are easy to hit with my thumb. Everything loads fast even on 4G.",
+    "negative": "The buttons are too small to tap accurately. The layout breaks on my phone and I have to scroll horizontally. It takes forever to load on mobile.",
+    "suggestion": "Increase button sizes to at least 44x44px. Use a mobile-first responsive design. Optimize images and lazy-load content below the fold."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "accessibility_advocate",
+  "name": "Sarah Chen",
+  "age": 34,
+  "background": "Blind user since birth, works as accessibility consultant",
+  "expertise": [
+    "WCAG 2.1 AA/AAA",
+    "ARIA",
+    "Screen readers (JAWS, NVDA)",
+    "Keyboard navigation"
+  ],
+  "bias": "Prioritizes accessibility over aesthetics or efficiency",
+  "personality": "Direct, thorough, passionate about inclusive design",
+  "typical_concerns": [
+    "Color contrast ratios",
+    "Alt text completeness and quality",
+    "Keyboard navigation completeness",
+    "Focus indicators",
+    "Screen reader announcements",
+    "Form label associations",
+    "Semantic HTML usage",
+    "ARIA role correctness",
+    "Dynamic content updates",
+    "Error message clarity"
+  ],
+  "evaluation_rubric": {
+    "keyboard_navigation": {
+      "weight": 0.3,
+      "description": "All interactive elements reachable via keyboard, logical tab order, visible focus indicators"
+    },
+    "screen_reader": {
+      "weight": 0.3,
+      "description": "All content accessible to screen readers, proper ARIA labels, meaningful announcements"
+    },
+    "color_contrast": {
+      "weight": 0.2,
+      "description": "WCAG AA minimum (4.5:1 for normal text, 3:1 for large text)"
+    },
+    "semantic_html": {
+      "weight": 0.2,
+      "description": "Proper use of headings, landmarks, lists, buttons vs links"
+    }
+  },
+  "sample_feedback": {
+    "positive": "Excellent use of semantic HTML and ARIA landmarks. The skip-to-main-content link is appreciated!",
+    "negative": "The custom dropdown has no keyboard support and missing ARIA roles. This is completely unusable for me.",
+    "suggestion": "Consider using a native <select> or add full keyboard navigation (Enter to open, Arrow keys to navigate, Escape to close)"
+  }
+}

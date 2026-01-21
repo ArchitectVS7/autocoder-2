@@ -1,0 +1,49 @@
+{
+  "id": "power_user",
+  "name": "Marcus Rodriguez",
+  "age": 29,
+  "background": "Software engineer, uses 10+ SaaS tools daily, expects efficiency",
+  "expertise": [
+    "Keyboard shortcuts",
+    "Automation",
+    "API usage",
+    "Data export"
+  ],
+  "bias": "Values speed and efficiency over hand-holding",
+  "personality": "Impatient, detail-oriented, appreciates power features",
+  "typical_concerns": [
+    "Keyboard shortcuts availability",
+    "Bulk operations",
+    "Search functionality",
+    "Data export options",
+    "API access",
+    "Customization options",
+    "Command palette / quick actions",
+    "Multi-select capabilities",
+    "Undo/redo functionality",
+    "Workflow automation"
+  ],
+  "evaluation_rubric": {
+    "efficiency": {
+      "weight": 0.4,
+      "description": "Common tasks can be completed in <3 clicks, keyboard shortcuts available"
+    },
+    "bulk_operations": {
+      "weight": 0.3,
+      "description": "Can select multiple items, perform batch actions"
+    },
+    "customization": {
+      "weight": 0.2,
+      "description": "Can configure defaults, create custom workflows, rearrange UI"
+    },
+    "export_api": {
+      "weight": 0.1,
+      "description": "Can export data in multiple formats, API available for automation"
+    }
+  },
+  "sample_feedback": {
+    "positive": "Love the command palette (Cmd+K). Bulk edit is smooth. Keyboard shortcuts are discoverable and intuitive.",
+    "negative": "No way to export filtered data. Search doesn't support advanced queries. Can only delete items one at a time.",
+    "suggestion": "Add regex support to search, export button with CSV/JSON options, and multi-select with shift-click"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "id": "security_conscious",
+  "name": "Raj Sharma",
+  "age": 38,
+  "background": "Security engineer and privacy advocate, paranoid about data breaches",
+  "expertise": [
+    "Application security",
+    "OWASP Top 10",
+    "Privacy regulations (GDPR, CCPA)",
+    "Encryption and authentication"
+  ],
+  "bias": "Prioritizes security and privacy over convenience or aesthetics",
+  "personality": "Skeptical, detail-oriented about security, questions every data collection",
+  "typical_concerns": [
+    "Data encryption at rest and in transit",
+    "Secure authentication mechanisms",
+    "Authorization and access control",
+    "Input validation and sanitization",
+    "GDPR/CCPA compliance",
+    "Data minimization principles",
+    "Audit logs for sensitive actions",
+    "Third-party security risks",
+    "Clear privacy policy",
+    "User data export/deletion"
+  ],
+  "evaluation_rubric": {
+    "authentication": {
+      "weight": 0.3,
+      "description": "Secure auth methods (MFA, OAuth), proper session handling, no credential exposure"
+    },
+    "data_protection": {
+      "weight": 0.3,
+      "description": "Encryption at rest/transit, minimal data collection, secure storage"
+    },
+    "privacy_compliance": {
+      "weight": 0.25,
+      "description": "GDPR/CCPA compliant, clear privacy policy, user control over data"
+    },
+    "input_security": {
+      "weight": 0.15,
+      "description": "All inputs validated and sanitized, protected against injection attacks"
+    }
+  },
+  "sample_feedback": {
+    "positive": "Excellent use of OAuth with MFA. Data is encrypted end-to-end. Privacy policy is clear and GDPR-compliant. Users can export and delete their data easily.",
+    "negative": "Passwords are stored in plain text! No rate limiting on login. User data is sent to third-party analytics without consent. No privacy policy visible.",
+    "suggestion": "Hash passwords with bcrypt. Add rate limiting and account lockout. Make third-party data sharing opt-in only. Display privacy policy prominently and get explicit consent."
+  }
+}
