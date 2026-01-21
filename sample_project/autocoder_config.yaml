@@ -1,0 +1,31 @@
+# Autocoder Configuration for Sample Todo List App
+# Optimized for small project (~15 features)
+
+# Phase toggles
+enable_design_iteration: true
+enable_checkpoints: true
+enable_ux_evaluation: true
+enable_metrics: true
+
+# Design iteration settings
+max_design_iterations: 3
+design_convergence_threshold: 0.8
+
+# Checkpoint settings
+checkpoint_frequency: 5        # Small project - checkpoint every 5 features
+auto_pause_on_critical: true
+
+# UX evaluation settings
+run_ux_after_completion: true
+ux_flows:
+  - onboarding   # User registration and first todo
+  - dashboard    # Main todo list view
+min_ux_score: 7.0
+
+# Metrics settings
+track_performance: true
+generate_comparison: true
+
+# Output settings
+output_directory: ./autocoder_output
+verbose_logging: true
