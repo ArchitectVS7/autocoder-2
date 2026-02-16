@@ -437,7 +437,11 @@ class AgentProcessManager:
 
     async def pause(self) -> tuple[bool, str]:
         """
-        Pause the agent using psutil for cross-platform support.
+        Request graceful pause (drain mode) for the agent.
+
+        Creates a .pause_drain signal file that the orchestrator detects.
+        The orchestrator will stop spawning new agents and wait for running
+        agents to complete their current features before pausing.
 
         Returns:
             Tuple of (success, message)
@@ -446,10 +450,20 @@ class AgentProcessManager:
             return False, "Agent is not running"
 
         try:
-            proc = psutil.Process(self.process.pid)
-            proc.suspend()
+            # Import paths module to create drain signal
+            import sys
+            from pathlib import Path
+            root = Path(__file__).parent.parent.parent
+            if str(root) not in sys.path:
+                sys.path.insert(0, str(root))
+            from paths import get_pause_drain_path
+
+            # Create pause/drain signal file
+            pause_file = get_pause_drain_path(self.project_dir)
+            pause_file.touch()
+
             self.status = "paused"
-            return True, "Agent paused"
+            return True, "Graceful pause requested - draining running agents"
         except psutil.NoSuchProcess:
             self.status = "crashed"
             self._remove_lock()
@@ -460,7 +474,10 @@ class AgentProcessManager:
 
     async def resume(self) -> tuple[bool, str]:
         """
-        Resume a paused agent.
+        Resume from graceful pause (drain mode).
+
+        Removes the .pause_drain signal file to allow the orchestrator
+        to resume spawning new agents.
 
         Returns:
             Tuple of (success, message)
@@ -469,10 +486,20 @@ class AgentProcessManager:
             return False, "Agent is not paused"
 
         try:
-            proc = psutil.Process(self.process.pid)
-            proc.resume()
+            # Import paths module to remove drain signal
+            import sys
+            from pathlib import Path
+            root = Path(__file__).parent.parent.parent
+            if str(root) not in sys.path:
+                sys.path.insert(0, str(root))
+            from paths import get_pause_drain_path
+
+            # Remove pause/drain signal file
+            pause_file = get_pause_drain_path(self.project_dir)
+            pause_file.unlink(missing_ok=True)
+
             self.status = "running"
-            return True, "Agent resumed"
+            return True, "Agent resumed from pause"
         except psutil.NoSuchProcess:
             self.status = "crashed"
             self._remove_lock()

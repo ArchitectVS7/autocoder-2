@@ -36,6 +36,8 @@ ALLOWED_COMMANDS = {
     "git",
     # Docker (for PostgreSQL)
     "docker",
+    # Browser automation
+    "playwright-cli",  # Browser automation via playwright-cli skill
     # Process management
     "ps",
     "lsof",
