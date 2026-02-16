@@ -209,6 +209,9 @@ class ParallelOrchestrator:
         # Track feature failures to prevent infinite retry loops
         self._failure_counts: dict[int, int] = {}
 
+        # Graceful pause (drain mode) flag
+        self._drain_requested = False
+
         # Database session for this orchestrator
         self._engine, self._session_maker = create_database(project_dir)
 
@@ -777,6 +780,38 @@ class ParallelOrchestrator:
         for proc in testing_procs:
             _kill_process_tree(proc, timeout=5.0)
 
+    def _check_drain_signal(self) -> bool:
+        """Check if the graceful pause (drain) signal file exists."""
+        from paths import get_pause_drain_path
+        return get_pause_drain_path(self.project_dir).exists()
+
+    def _clear_drain_signal(self) -> None:
+        """Delete the drain signal file and reset the flag."""
+        from paths import get_pause_drain_path
+        get_pause_drain_path(self.project_dir).unlink(missing_ok=True)
+        self._drain_requested = False
+
+    def request_pause(self) -> None:
+        """Request a graceful pause (drain mode).
+
+        Creates the .pause_drain signal file to trigger drain mode.
+        The orchestrator will stop spawning new agents and wait for
+        running agents to complete, then enter paused state.
+        """
+        from paths import get_pause_drain_path
+        pause_file = get_pause_drain_path(self.project_dir)
+        pause_file.touch()
+        print(f"Pause requested - created signal file: {pause_file}", flush=True)
+
+    def resume(self) -> None:
+        """Resume from paused state.
+
+        Removes the .pause_drain signal file to allow the orchestrator
+        to resume spawning agents.
+        """
+        self._clear_drain_signal()
+        print("Resume requested - removed pause signal file", flush=True)
+
     async def run_loop(self):
         """Main orchestration loop."""
         self.is_running = True
@@ -868,12 +903,43 @@ class ParallelOrchestrator:
                 print(f"  - Feature #{f['id']}: {f['name']}", flush=True)
             print(flush=True)
 
+        # Clear any stale drain signal from a previous session
+        self._clear_drain_signal()
+
         debug_log.section("FEATURE LOOP STARTING")
         loop_iteration = 0
         while self.is_running:
             loop_iteration += 1
             if loop_iteration <= 3:
                 print(f"[DEBUG] === Loop iteration {loop_iteration} ===", flush=True)
+
+            # --- Graceful pause (drain mode) ---
+            if not self._drain_requested and self._check_drain_signal():
+                self._drain_requested = True
+                print("Graceful pause requested - draining running agents...", flush=True)
+                debug_log.log("DRAIN", "Graceful pause requested, draining running agents")
+
+            if self._drain_requested:
+                with self._lock:
+                    coding_count = len(self.running_coding_agents)
+                    testing_count = len(self.running_testing_agents)
+
+                if coding_count == 0 and testing_count == 0:
+                    print("All agents drained - paused.", flush=True)
+                    debug_log.log("DRAIN", "All agents drained, entering paused state")
+                    # Wait until signal file is removed (resume) or shutdown
+                    while self._check_drain_signal() and self.is_running:
+                        await asyncio.sleep(1)
+                    if not self.is_running:
+                        break
+                    self._drain_requested = False
+                    print("Resuming from graceful pause...", flush=True)
+                    debug_log.log("DRAIN", "Resuming from graceful pause")
+                    continue
+                else:
+                    debug_log.log("DRAIN", f"Waiting for agents to finish: coding={coding_count}, testing={testing_count}")
+                    await asyncio.sleep(POLL_INTERVAL)
+                    continue
 
             # Log every iteration to debug file (first 10, then every 5th)
             if loop_iteration <= 10 or loop_iteration % 5 == 0:

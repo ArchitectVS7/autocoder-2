@@ -744,3 +744,87 @@ async def set_dependencies(project_name: str, feature_id: int, update: Dependenc
     except Exception:
         logger.exception("Failed to set dependencies")
         raise HTTPException(status_code=500, detail="Failed to set dependencies")
+
+
+@router.get("/human-input", response_model=FeatureListResponse)
+def get_features_needing_human_input(project_name: str):
+    """Get all features that are blocked waiting for human input.
+
+    Returns features where needs_human_input=True, sorted by priority.
+    """
+    validate_project_name(project_name)
+    project_dir = _get_project_path(project_name)
+    create_database, Feature = _get_db_classes()
+
+    with get_db_session(project_dir) as session:
+        features = (
+            session.query(Feature)
+            .filter(Feature.needs_human_input == True)
+            .order_by(Feature.priority)
+            .all()
+        )
+
+        return FeatureListResponse(
+            features=[feature_to_response(f) for f in features],
+            total=len(features),
+        )
+
+
+@router.post("/{feature_id}/human-input")
+def respond_to_human_input(project_name: str, feature_id: int, response: dict):
+    """Provide a response to a feature's human input request.
+
+    This clears the needs_human_input flag and stores the response,
+    making the feature available to be picked up again.
+
+    Args:
+        project_name: Project identifier
+        feature_id: Feature ID
+        response: Dictionary with field_id -> value mappings
+
+    Returns:
+        Success confirmation with feature details
+    """
+    validate_project_name(project_name)
+    project_dir = _get_project_path(project_name)
+    create_database, Feature = _get_db_classes()
+
+    with get_db_session(project_dir) as session:
+        feature = session.query(Feature).filter(Feature.id == feature_id).first()
+        if not feature:
+            raise HTTPException(status_code=404, detail=f"Feature {feature_id} not found")
+
+        if not feature.needs_human_input:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Feature {feature_id} is not waiting for human input"
+            )
+
+        # Validate response against request
+        request_data = feature.human_input_request
+        if not request_data or "fields" not in request_data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Feature {feature_id} has invalid human_input_request"
+            )
+
+        # Basic validation: check required fields
+        for field in request_data["fields"]:
+            field_id = field["id"]
+            required = field.get("required", True)
+            if required and field_id not in response:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Missing required field: {field_id}"
+                )
+
+        # Store response and clear needs_human_input flag
+        feature.human_input_response = response
+        feature.needs_human_input = False
+        session.commit()
+
+        return {
+            "success": True,
+            "feature_id": feature_id,
+            "message": f"Human input recorded for feature '{feature.name}'"
+        }
