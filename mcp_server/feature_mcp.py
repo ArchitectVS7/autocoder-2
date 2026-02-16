@@ -17,6 +17,8 @@ Tools:
 - feature_clear_in_progress: Clear in-progress status
 - feature_create_bulk: Create multiple features at once
 - feature_create: Create a single feature
+- feature_request_human_input: Request structured input from a human for a blocked feature
+- ask_user: Ask the user structured questions with selectable options
 """
 
 import json
@@ -1042,6 +1044,143 @@ def feature_set_dependencies(
         })
     finally:
         session.close()
+
+
+@mcp.tool()
+def feature_request_human_input(
+    feature_id: Annotated[int, Field(description="The ID of the feature that needs human input", ge=1)],
+    prompt: Annotated[str, Field(min_length=1, description="Explain what you need from the human and why")],
+    fields: Annotated[list[dict], Field(min_length=1, description="List of input fields to collect")]
+) -> str:
+    """Request structured input from a human for a feature that is blocked.
+
+    Use this ONLY when the feature genuinely cannot proceed without human intervention:
+    - Creating API keys or external accounts
+    - Choosing between design approaches that require human preference
+    - Configuring external services the agent cannot access
+    - Providing credentials or secrets
+
+    Do NOT use this for issues you can solve yourself (debugging, reading docs, etc.).
+
+    The feature will be moved out of in_progress and into a "needs human input" state.
+    Once the human provides their response, the feature returns to the pending queue
+    and will include the human's response when you pick it up again.
+
+    Args:
+        feature_id: The ID of the feature that needs human input
+        prompt: A clear explanation of what you need and why
+        fields: List of input fields, each with:
+            - id (str): Unique field identifier
+            - label (str): Human-readable label
+            - type (str): "text", "textarea", "select", or "boolean" (default: "text")
+            - required (bool): Whether the field is required (default: true)
+            - placeholder (str, optional): Placeholder text
+            - options (list, optional): For select type: [{value, label}]
+
+    Returns:
+        JSON with success confirmation or error message
+    """
+    # Validate fields
+    VALID_FIELD_TYPES = {"text", "textarea", "select", "boolean"}
+    seen_ids: set[str] = set()
+    for i, field in enumerate(fields):
+        if "id" not in field or "label" not in field:
+            return json.dumps({"error": f"Field at index {i} missing required 'id' or 'label'"})
+        fid = field["id"]
+        flabel = field["label"]
+        if not isinstance(fid, str) or not fid.strip():
+            return json.dumps({"error": f"Field at index {i} has empty or invalid 'id'"})
+        if not isinstance(flabel, str) or not flabel.strip():
+            return json.dumps({"error": f"Field at index {i} has empty or invalid 'label'"})
+        if fid in seen_ids:
+            return json.dumps({"error": f"Duplicate field id '{fid}' at index {i}"})
+        seen_ids.add(fid)
+        ftype = field.get("type", "text")
+        if ftype not in VALID_FIELD_TYPES:
+            return json.dumps({"error": f"Field at index {i} has invalid type '{ftype}'. Must be one of: {', '.join(sorted(VALID_FIELD_TYPES))}"})
+        if ftype == "select":
+            options = field.get("options")
+            if not options or not isinstance(options, list):
+                return json.dumps({"error": f"Field at index {i} is type 'select' but missing or invalid 'options' array"})
+            for j, opt in enumerate(options):
+                if not isinstance(opt, dict):
+                    return json.dumps({"error": f"Field at index {i}, option {j} must be an object with 'value' and 'label'"})
+                if "value" not in opt or "label" not in opt:
+                    return json.dumps({"error": f"Field at index {i}, option {j} missing required 'value' or 'label'"})
+                if not isinstance(opt["value"], str) or not opt["value"].strip():
+                    return json.dumps({"error": f"Field at index {i}, option {j} has empty or invalid 'value'"})
+                if not isinstance(opt["label"], str) or not opt["label"].strip():
+                    return json.dumps({"error": f"Field at index {i}, option {j} has empty or invalid 'label'"})
+        elif field.get("options"):
+            return json.dumps({"error": f"Field at index {i} has 'options' but type is '{ftype}' (only 'select' uses options)"})
+
+    request_data = {
+        "prompt": prompt,
+        "fields": fields,
+    }
+
+    session = get_session()
+    try:
+        # Atomically set needs_human_input, clear in_progress, store request, clear previous response
+        result = session.execute(text("""
+            UPDATE features
+            SET needs_human_input = 1,
+                in_progress = 0,
+                human_input_request = :request,
+                human_input_response = NULL
+            WHERE id = :id AND passes = 0 AND in_progress = 1
+        """), {"id": feature_id, "request": json.dumps(request_data)})
+        session.commit()
+
+        if result.rowcount == 0:
+            feature = session.query(Feature).filter(Feature.id == feature_id).first()
+            if feature is None:
+                return json.dumps({"error": f"Feature with ID {feature_id} not found"})
+            if feature.passes:
+                return json.dumps({"error": f"Feature with ID {feature_id} is already passing"})
+            if not feature.in_progress:
+                return json.dumps({"error": f"Feature with ID {feature_id} is not in progress"})
+            return json.dumps({"error": "Failed to request human input for unknown reason"})
+
+        feature = session.query(Feature).filter(Feature.id == feature_id).first()
+        return json.dumps({
+            "success": True,
+            "feature_id": feature_id,
+            "name": feature.name,
+            "message": f"Feature '{feature.name}' is now blocked waiting for human input"
+        })
+    finally:
+        session.close()
+
+
+@mcp.tool()
+def ask_user(
+    questions: Annotated[list[dict], Field(description="List of questions to ask, each with question, header, options (list of {label, description}), and multiSelect (bool)")]
+) -> str:
+    """Ask the user structured questions with selectable options.
+
+    Use this when you need clarification or want to offer choices to the user.
+    Each question has a short header, the question text, and 2-4 clickable options.
+    The user's selections will be returned as your next message.
+
+    Args:
+        questions: List of questions, each with:
+            - question (str): The question to ask
+            - header (str): Short label (max 12 chars)
+            - options (list): Each with label (str) and description (str)
+            - multiSelect (bool): Allow multiple selections (default false)
+
+    Returns:
+        Acknowledgment that questions were presented to the user
+    """
+    # Validate input
+    for i, q in enumerate(questions):
+        if not all(key in q for key in ["question", "header", "options"]):
+            return json.dumps({"error": f"Question at index {i} missing required fields"})
+        if len(q["options"]) < 2 or len(q["options"]) > 4:
+            return json.dumps({"error": f"Question at index {i} must have 2-4 options"})
+
+    return "Questions presented to the user. Their response will arrive as your next message."
 
 
 if __name__ == "__main__":

@@ -43,9 +43,14 @@ class Feature(Base):
     is_blocked = Column(Boolean, default=False, index=True)
     passing_with_mocks = Column(Boolean, default=False)
 
+    # Human input: agent can request structured input from a human
+    needs_human_input = Column(Boolean, nullable=False, default=False, index=True)
+    human_input_request = Column(JSON, nullable=True, default=None)   # Agent's structured request
+    human_input_response = Column(JSON, nullable=True, default=None)  # Human's response
+
     # Relationships
-    dependencies = relationship("FeatureDependency", foreign_keys="FeatureDependency.feature_id", back_populates="feature")
-    dependent_features = relationship("FeatureDependency", foreign_keys="FeatureDependency.depends_on_feature_id", back_populates="depends_on")
+    feature_dependencies = relationship("FeatureDependency", foreign_keys="FeatureDependency.feature_id", back_populates="feature")
+    dependent_on_features = relationship("FeatureDependency", foreign_keys="FeatureDependency.depends_on_feature_id", back_populates="depends_on")
     assumptions = relationship("FeatureAssumption", foreign_keys="FeatureAssumption.feature_id", back_populates="feature")
     blockers = relationship("FeatureBlocker", back_populates="feature")
 
@@ -70,6 +75,10 @@ class Feature(Base):
             "blocker_description": self.blocker_description,
             "is_blocked": self.is_blocked,
             "passing_with_mocks": self.passing_with_mocks,
+            # Human input fields
+            "needs_human_input": self.needs_human_input if self.needs_human_input is not None else False,
+            "human_input_request": self.human_input_request,
+            "human_input_response": self.human_input_response,
         }
 
 
@@ -87,8 +96,8 @@ class FeatureDependency(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    feature = relationship("Feature", foreign_keys=[feature_id], back_populates="dependencies")
-    depends_on = relationship("Feature", foreign_keys=[depends_on_feature_id], back_populates="dependent_features")
+    feature = relationship("Feature", foreign_keys=[feature_id], back_populates="feature_dependencies")
+    depends_on = relationship("Feature", foreign_keys=[depends_on_feature_id], back_populates="dependent_on_features")
 
     def to_dict(self) -> dict:
         """Convert dependency to dictionary for JSON serialization."""
@@ -344,6 +353,21 @@ def _migrate_add_phase1_columns(engine) -> None:
         conn.commit()
 
 
+def _migrate_add_human_input_columns(engine) -> None:
+    """Add human input columns to existing databases that don't have them."""
+    with engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(features)"))
+        columns = [row[1] for row in result.fetchall()]
+
+        if "needs_human_input" not in columns:
+            conn.execute(text("ALTER TABLE features ADD COLUMN needs_human_input BOOLEAN DEFAULT 0"))
+        if "human_input_request" not in columns:
+            conn.execute(text("ALTER TABLE features ADD COLUMN human_input_request TEXT DEFAULT NULL"))
+        if "human_input_response" not in columns:
+            conn.execute(text("ALTER TABLE features ADD COLUMN human_input_response TEXT DEFAULT NULL"))
+        conn.commit()
+
+
 def create_database(project_dir: Path) -> tuple:
     """
     Create database and return engine + session maker.
@@ -378,6 +402,9 @@ def create_database(project_dir: Path) -> tuple:
 
     # Migrate existing databases to add Phase 1 columns
     _migrate_add_phase1_columns(engine)
+
+    # Migrate existing databases to add human input columns
+    _migrate_add_human_input_columns(engine)
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return engine, SessionLocal

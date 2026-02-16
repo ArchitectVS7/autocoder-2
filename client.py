@@ -74,38 +74,10 @@ FEATURE_MCP_TOOLS = [
     "mcp__features__feature_get_graph",
 ]
 
-# Playwright MCP tools for browser automation
-PLAYWRIGHT_TOOLS = [
-    # Core navigation & screenshots
-    "mcp__playwright__browser_navigate",
-    "mcp__playwright__browser_navigate_back",
-    "mcp__playwright__browser_take_screenshot",
-    "mcp__playwright__browser_snapshot",
-
-    # Element interaction
-    "mcp__playwright__browser_click",
-    "mcp__playwright__browser_type",
-    "mcp__playwright__browser_fill_form",
-    "mcp__playwright__browser_select_option",
-    "mcp__playwright__browser_hover",
-    "mcp__playwright__browser_drag",
-    "mcp__playwright__browser_press_key",
-
-    # JavaScript & debugging
-    "mcp__playwright__browser_evaluate",
-    # "mcp__playwright__browser_run_code",  # REMOVED - causes Playwright MCP server crash
-    "mcp__playwright__browser_console_messages",
-    "mcp__playwright__browser_network_requests",
-
-    # Browser management
-    "mcp__playwright__browser_close",
-    "mcp__playwright__browser_resize",
-    "mcp__playwright__browser_tabs",
-    "mcp__playwright__browser_wait_for",
-    "mcp__playwright__browser_handle_dialog",
-    "mcp__playwright__browser_file_upload",
-    "mcp__playwright__browser_install",
-]
+# NOTE: Playwright CLI is now used for browser automation instead of MCP server
+# The agent invokes `playwright-cli` commands via bash (e.g., `playwright-cli open http://localhost:3000`)
+# See .claude/skills/playwright-cli/SKILL.md for documentation
+# This is simpler than the MCP server approach and has fewer moving parts
 
 # Built-in tools
 BUILTIN_TOOLS = [
@@ -148,11 +120,9 @@ def create_client(
     Note: Authentication is handled by start.bat/start.sh before this runs.
     The Claude SDK auto-detects credentials from the Claude CLI configuration
     """
-    # Build allowed tools list based on mode
-    # In YOLO mode, exclude Playwright tools for faster prototyping
+    # Build allowed tools list
+    # Note: Playwright CLI is invoked via bash commands, not MCP tools
     allowed_tools = [*BUILTIN_TOOLS, *FEATURE_MCP_TOOLS]
-    if not yolo_mode:
-        allowed_tools.extend(PLAYWRIGHT_TOOLS)
 
     # Build permissions list
     permissions_list = [
@@ -171,9 +141,7 @@ def create_client(
         # Allow Feature MCP tools for feature management
         *FEATURE_MCP_TOOLS,
     ]
-    if not yolo_mode:
-        # Allow Playwright MCP tools for browser automation (standard mode only)
-        permissions_list.extend(PLAYWRIGHT_TOOLS)
+    # Note: Playwright CLI is invoked via bash commands, not MCP tools
 
     # Create comprehensive security settings
     # Note: Using relative paths ("./**") restricts access to project directory
@@ -198,10 +166,8 @@ def create_client(
     print("   - Sandbox enabled (OS-level bash isolation)")
     print(f"   - Filesystem restricted to: {project_dir.resolve()}")
     print("   - Bash commands restricted to allowlist (see security.py)")
-    if yolo_mode:
-        print("   - MCP servers: features (database) - YOLO MODE (no Playwright)")
-    else:
-        print("   - MCP servers: playwright (browser), features (database)")
+    print("   - MCP servers: features (database)")
+    print("   - Browser automation: playwright-cli (invoked via bash)")
     print("   - Project settings enabled (skills, commands, CLAUDE.md)")
     print()
 
@@ -212,7 +178,8 @@ def create_client(
     else:
         print("   - Warning: System 'claude' CLI not found, using bundled CLI")
 
-    # Build MCP servers config - features is always included, playwright only in standard mode
+    # Build MCP servers config - only features MCP server is needed
+    # Browser automation now uses playwright-cli via bash commands
     mcp_servers = {
         "features": {
             "command": sys.executable,  # Use the same Python that's running this script
@@ -225,26 +192,6 @@ def create_client(
             },
         },
     }
-    if not yolo_mode:
-        # Include Playwright MCP server for browser automation (standard mode only)
-        # Headless mode is configurable via PLAYWRIGHT_HEADLESS environment variable
-        playwright_args = ["@playwright/mcp@latest", "--viewport-size", "1280x720"]
-        if get_playwright_headless():
-            playwright_args.append("--headless")
-
-        # Browser isolation for parallel execution
-        # Each agent gets its own isolated browser context to prevent tab conflicts
-        if agent_id:
-            # Use --isolated for ephemeral browser context
-            # This creates a fresh, isolated context without persistent state
-            # Note: --isolated and --user-data-dir are mutually exclusive
-            playwright_args.append("--isolated")
-            print(f"   - Browser isolation enabled for agent: {agent_id}")
-
-        mcp_servers["playwright"] = {
-            "command": "npx",
-            "args": playwright_args,
-        }
 
     # Build environment overrides for API endpoint configuration
     # These override system env vars for the Claude CLI subprocess,
