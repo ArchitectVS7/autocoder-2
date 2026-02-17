@@ -468,8 +468,6 @@ Create `.env` file in project root:
 PROGRESS_N8N_WEBHOOK_URL=https://n8n.example.com/webhook/abc123
 
 # Alternative API provider (optional)
-ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
-ANTHROPIC_AUTH_TOKEN=your-api-key
 ANTHROPIC_DEFAULT_SONNET_MODEL=glm-4.7
 
 # Supervisory agent mode (optional)
