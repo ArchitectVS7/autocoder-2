@@ -128,9 +128,8 @@ The agent interacts with features through an MCP server:
 - `feature_skip` - Move feature to end of queue
 - `feature_get_for_regression` - Random passing features for testing
 
-**Human Input (NEW!):**
 - `feature_request_human_input` - Request structured input from humans
-- `ask_user` - Ask questions with selectable options
+- `ask_user` - Ask questions with selectable options and get responses
 
 **Dependency Management:**
 - `feature_add_dependency` - Add dependency (with cycle detection)
