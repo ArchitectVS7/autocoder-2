@@ -105,8 +105,8 @@ The CLI menu provides:
 
 ### 1. Two-Agent Pattern
 
-**Initializer Agent (First Session)**
-- Reads your app specification (XML format)
+Initializer Agent (First Session)
+- Reads your app specification (from `app_spec.txt` in XML format)
 - Generates feature test cases with priorities
 - Sets up project structure and git
 - Creates `features.db` with all test cases
