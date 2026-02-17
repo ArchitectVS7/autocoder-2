@@ -727,19 +727,9 @@ claude login
 - Security system working as intended
 - Add to `ALLOWED_COMMANDS` in `security.py` if needed
 
-**"Feature awaiting human input - agent stuck"**
-```bash
-# Check which features need input
-curl http://localhost:8000/api/projects/my-app/features/human-input
-
-# Provide response
 curl -X POST http://localhost:8000/api/projects/my-app/features/1/human-input \
   -H "Content-Type: application/json" \
   -d '{"field_id": "value"}'
-
-# Or use supervisory agent mode
-export ENABLE_SUPERVISORY_AGENT=true
-```
 
 **"Pause not working - agents still running"**
 ```bash
