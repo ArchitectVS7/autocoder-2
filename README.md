@@ -117,7 +117,7 @@ Initializer Agent (First Session)
 - Runs regression tests on passing features
 - Auto-continues with 3-second delay between sessions
 
-### 2. Feature Management (MCP Tools)
+### 2. Feature Management Operations (MCP Tools)
 
 The agent interacts with features through an MCP server:
 
