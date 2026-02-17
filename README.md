@@ -139,6 +139,8 @@ The agent interacts with features through an MCP server:
 
 ### 3. Browser Automation (Playwright CLI)
 
+Agents interact with the browser using simple `playwright-cli` bash commands:
+
 Instead of MCP server complexity, agents use simple bash commands:
 
 ```bash
